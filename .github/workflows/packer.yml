@@ -47,7 +47,7 @@ jobs:
           path: proxmox-packer-framework
           persist-credentials: false
           ref: main
-          repository: Trinity-Technical-Services-LLC/proxmox-packer-framework
+          repository: NWarila/Proxmox-Packer-Framework
 
       - name: Copy 'systems.auto.pkrvars' to Packer Framework repo
         shell: bash
