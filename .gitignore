@@ -1,0 +1,70 @@
+#region ------ [ Header ] --------------------------------------------------------------------- #
+#  _____    _       _ _           _____         _       _____                 _                 #
+# |_   _|  (_)     (_) |         |_   _|       | |     /  ___|               (_)                #
+#   | |_ __ _ _ __  _| |_ _   _    | | ___  ___| |__   \ `--.  ___ _ ____   ___  ___ ___  ___   #
+#   | | '__| | '_ \| | __| | | |   | |/ _ \/ __| '_ \   `--. \/ _ \ '__\ \ / / |/ __/ _ \/ __|  #
+#   | | |  | | | | | | |_| |_| |   | |  __/ (__| | | | /\__/ /  __/ |   \ V /| | (_|  __/\__ \  #
+#   \_/_|  |_|_| |_|_|\__|\__, |   \_/\___|\___|_| |_| \____/ \___|_|    \_/ |_|\___\___||___/  #
+#                          __/ |                                                                #
+#                         |___/                                                                 #
+# --- [ DESCRIPTION ] ------------------------------------------------------------------------- #
+#%   A '.gitignore' file specifies intentionally untracked files that Git should ignore        %#
+#%   It helps ensure sensitive or irrelevant files (state, caches, etc.) are not committed.    %#
+#%                                                                                             %#
+#% ADDITIONAL INFORMATION                                                                      %#
+#%   Official Git Documentation: https://git-scm.com/docs/gitignore                            %#
+#%   Terraform Remote State (S3 backend) Best Practice: Use remote backends in production      %#
+#%   Terraform Lock File Info: Terraform lock file should be kept in VCS for provider          %#
+#%   consistency.                                                                              %#
+#%                                                                                             %#
+# --- [ IMPLEMENTATION ] ---------------------------------------------------------------------- #
+#-    Version         1.0.0                                                                    -#
+#-    Author          Warila, Nicholas R.                                                      -#
+#-    License         MIT License                                                              -#
+# --- [ History ] ----------------------------------------------------------------------------- #
+#+  v1.0.0 : 2024/02/23 : Warila : Initial Creation                                            +#
+#+                                                                                             +#
+#endregion --- [ Header ] --------------------------------------------------------------------- #
+
+# By default, ignore everything.
+**
+
+# Include GIT core files.
+!LICENSE
+!README.md
+!.gitignore
+!.gitattributes
+
+# Include VSCode settings and extensions recommendations.
+!.vscode
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Include Github Actions workflows.
+!.github
+!.github/workflows/
+!.github/workflows/packer.yml
+
+# Include Core Terraform files.
+!builds.pkr.hcl
+!data.pkr.hcl
+!locals.pkr.hcl
+!providers.pkr.hcl
+!source.pkr.hcl
+!variables.pkr.hcl
+
+# Include Variables File
+!systems.auto.pkrvars.hcl
+
+# Include Manifest Folder
+!/manifests
+!/manifests/.gitkeep
+
+# Include Data Templates
+!/data
+!/data/.gitkeep
+!/data/ks.pkrtpl.hcl
+!/data/network.pkrtpl.hcl
+!/data/storage.pkrtpl.hcl
+
+# Include Ansible Folder
