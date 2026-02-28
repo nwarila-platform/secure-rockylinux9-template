@@ -1,0 +1,72 @@
+name: "Packer Build (Proxmox)"
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - ansible-playbook.yml
+      - systems.auto.pkrvars.hcl
+
+permissions:
+  contents: read
+
+concurrency:
+  group: packer-${{ github.event.repository.name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  packer:
+    runs-on: [self-hosted, Linux, X64]
+    timeout-minutes: 120
+    env:
+      # Proxmox Variables
+      PKR_VAR_proxmox_hostname:         ${{ secrets.PROXMOX_HOSTNAME }}
+      PKR_VAR_proxmox_api_token_id:     ${{ secrets.PROXMOX_PACKER_FRAMEWORK_TOKEN_ID }}
+      PKR_VAR_proxmox_api_token_secret: ${{ secrets.PROXMOX_PACKER_FRAMEWORK_SECRET }}
+      PKR_VAR_proxmox_skip_tls_verify:  ${{ vars.PROXMOX_SKIP_TLS_VERIFY || 'false' }}
+      PKR_VAR_proxmox_node:             ${{ secrets.PROXMOX_NODE }}
+
+      # Deploy User Variables
+      PKR_VAR_deploy_user_name:     ${{ secrets.DEPLOY_USER_NAME }}
+      PKR_VAR_deploy_user_password: ${{ secrets.DEPLOY_USER_PASSWORD }}
+      PKR_VAR_deploy_user_key:      ${{ secrets.DEPLOY_USER_KEY }}
+
+    steps:
+      - name: Checkout GitHub Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          path: ${{ github.event.repository.name }}
+          persist-credentials: false
+
+      - name: Checkout Packer Framework Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          path: proxmox-packer-framework
+          persist-credentials: false
+          ref: main
+          repository: Trinity-Technical-Services-LLC/proxmox-packer-framework
+
+      - name: Copy 'systems.auto.pkrvars' to Packer Framework repo
+        shell: bash
+        run: |
+          cp "${{ github.event.repository.name }}/systems.auto.pkrvars.hcl" \
+            "proxmox-packer-framework/packer/systems.auto.pkrvars.hcl"
+
+      - name: Packer init (install required_plugins)
+        working-directory: proxmox-packer-framework/packer
+        run: /usr/bin/packer init -upgrade .
+
+      - name: Packer Format
+        working-directory: proxmox-packer-framework/packer
+        run: packer fmt -check -diff .
+
+      - name: Packer Validate
+        working-directory: proxmox-packer-framework/packer
+        run: /usr/bin/packer validate .
+
+      - name: Packer build
+        working-directory: proxmox-packer-framework/packer
+        run: /usr/bin/packer build -timestamp-ui -color=false -on-error=cleanup .
