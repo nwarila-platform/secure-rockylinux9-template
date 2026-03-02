@@ -105,25 +105,25 @@ jobs:
         working-directory: ${{ github.workspace }}/proxmox-packer-framework
         run: |
           set -euo pipefail
-          packer init -upgrade .
+          /usr/bin/packer init -upgrade .
 
       - name: Packer fmt
         shell: bash
         working-directory: ${{ github.workspace }}/proxmox-packer-framework
         run: |
           set -euo pipefail
-          packer fmt -check -diff .
+          /usr/bin/packer fmt -check -diff .
 
       - name: Packer validate
         shell: bash
         working-directory: ${{ github.workspace }}/proxmox-packer-framework
         run: |
           set -euo pipefail
-          packer validate .
+          /usr/bin/packer validate .
 
       - name: Packer build
         shell: bash
         working-directory: ${{ github.workspace }}/proxmox-packer-framework
         run: |
           set -euo pipefail
-          packer build -timestamp-ui -color=false -on-error=cleanup .
+          /usr/bin/packer build -timestamp-ui -color=false -on-error=cleanup .
