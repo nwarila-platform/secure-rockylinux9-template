@@ -85,8 +85,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          source_file="${GITHUB_WORKSPACE}/${GITHUB_REPOSITORY##*/}/packer/systems.auto.pkrvars.hcl"
-          destination_dir="${GITHUB_WORKSPACE}/proxmox-packer-framework"
+          source_file="${GITHUB_WORKSPACE}/${GITHUB_REPOSITORY##*/}/systems.auto.pkrvars.hcl"
+          destination_dir="${GITHUB_WORKSPACE}/proxmox-packer-framework/packer"
 
           if [[ ! -f "${source_file}" ]]; then
             echo "Required file not found: ${source_file}" >&2
