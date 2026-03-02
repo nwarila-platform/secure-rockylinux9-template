@@ -30,7 +30,7 @@ jobs:
       # Deploy User Variables
       PKR_VAR_deploy_user_name:     ${{ secrets.DEPLOY_USER_NAME }}
       PKR_VAR_deploy_user_password: ${{ secrets.DEPLOY_USER_PASSWORD }}
-      PKR_VAR_deploy_user_key:      ${{ secrets.DEPLOY_USER_KEY }}
+      PKR_VAR_deploy_user_key:      ${{ secrets.DEPLOY_USER_PUBLIC_KEY }}
 
     steps:
       - name: Checkout GitHub Repository
