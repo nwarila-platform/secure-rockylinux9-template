@@ -126,4 +126,4 @@ jobs:
         working-directory: ${{ github.workspace }}/proxmox-packer-framework/packer
         run: |
           set -euo pipefail
-          /usr/bin/packer build -timestamp-ui -color=false -on-error=cleanup .
+          /usr/bin/packer build -force -timestamp-ui -color=false -on-error=cleanup .
