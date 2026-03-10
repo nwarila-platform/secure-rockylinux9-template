@@ -13,9 +13,9 @@
 #%                                                                                             %#
 #% ADDITIONAL INFORMATION                                                                      %#
 #%   Official Git Documentation: https://git-scm.com/docs/gitignore                            %#
-#%   Terraform Remote State (S3 backend) Best Practice: Use remote backends in production      %#
-#%   Terraform Lock File Info: Terraform lock file should be kept in VCS for provider          %#
-#%   consistency.                                                                              %#
+#%   This file uses an allowlist pattern: deny everything (**), then explicitly include        %#
+#%   only the files and directories that belong in the repository.                             %#
+#%                                                                                             %#
 #%                                                                                             %#
 # --- [ IMPLEMENTATION ] ---------------------------------------------------------------------- #
 #-    Version         1.0.0                                                                    -#
@@ -72,31 +72,10 @@
 !.github/ISSUE_TEMPLATE/bug_report.yml
 !.github/ISSUE_TEMPLATE/feature_request.yml
 !.github/workflows/
-!.github/workflows/packer.yml
+!.github/workflows/packer.yaml
 !.github/workflows/security.yaml
 !.github/workflows/codeql.yaml
 !.github/workflows/release-please.yaml
 
-# Include Core Terraform files.
-!builds.pkr.hcl
-!data.pkr.hcl
-!locals.pkr.hcl
-!providers.pkr.hcl
-!source.pkr.hcl
-!variables.pkr.hcl
-
-# Include Variables File
+# Include Packer configuration files.
 !systems.auto.pkrvars.hcl
-
-# Include Manifest Folder
-!/manifests
-!/manifests/.gitkeep
-
-# Include Data Templates
-!/data
-!/data/.gitkeep
-!/data/ks.pkrtpl.hcl
-!/data/network.pkrtpl.hcl
-!/data/storage.pkrtpl.hcl
-
-# Include Ansible Folder

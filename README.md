@@ -1,6 +1,6 @@
 # Secure Rocky Linux 9 Template
 
-[![Packer Build](https://github.com/NWarila/Secure-RockyLinux9-Template/actions/workflows/packer.yml/badge.svg)](https://github.com/NWarila/Secure-RockyLinux9-Template/actions/workflows/packer.yml)
+[![Packer Build](https://github.com/NWarila/Secure-RockyLinux9-Template/actions/workflows/packer.yaml/badge.svg)](https://github.com/NWarila/Secure-RockyLinux9-Template/actions/workflows/packer.yaml)
 [![Security Scan](https://github.com/NWarila/Secure-RockyLinux9-Template/actions/workflows/security.yaml/badge.svg)](https://github.com/NWarila/Secure-RockyLinux9-Template/actions/workflows/security.yaml)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
@@ -85,7 +85,7 @@ partitioning scheme, etc.).
 │   ├── pull_request_template.md
 │   ├── ISSUE_TEMPLATE/         # Structured issue forms
 │   └── workflows/
-│       ├── packer.yml          #   Build & validate pipeline
+│       ├── packer.yaml          #   Build & validate pipeline
 │       ├── security.yaml       #   Trivy + Gitleaks scanning
 │       ├── codeql.yaml         #   CodeQL SAST analysis
 │       └── release-please.yaml #   Automated versioning

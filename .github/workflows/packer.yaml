@@ -5,8 +5,8 @@ on:
   push:
     branches: [ main ]
     paths:
-      - ansible-playbook.yml
       - systems.auto.pkrvars.hcl
+      - .github/workflows/packer.yaml
 
 permissions:
   contents: read
@@ -100,7 +100,7 @@ jobs:
 
           cp -f "${source_file}" "${destination_dir}/"
 
-      - name: test
+      - name: Packer Init
         shell: bash
         working-directory: ${{ github.workspace }}/proxmox-packer-framework/packer
         run: |
