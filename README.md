@@ -185,5 +185,3 @@ See [SECURITY.md](SECURITY.md) for the vulnerability disclosure policy.
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
-
-Copyright (c) 2025 Trinity-Technical-Services-LLC
