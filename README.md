@@ -18,7 +18,7 @@ golden images ready for enterprise deployment.
 | Category | Tools |
 |---|---|
 | **OS Hardening** | CIS-aligned partitioning, mount options (`nodev`, `noexec`, `nosuid`) |
-| **Provisioning** | Kickstart automated installation, Ansible post-configuration |
+| **Provisioning** | Consumer-owned Kickstart template, Ansible post-configuration |
 | **Infrastructure** | Proxmox VE integration, UEFI/OVMF boot, TPM 2.0, Cloud-Init |
 | **Formatting** | `packer fmt`, markdownlint, yamllint, `.editorconfig` |
 | **Security** | Trivy (HIGH/CRITICAL), Gitleaks, CodeQL, `detect-private-key` |
@@ -30,7 +30,8 @@ golden images ready for enterprise deployment.
 
 | Tool | Version | Purpose |
 |---|---|---|
-| [Packer](https://www.packer.io/) | >= 1.10 | VM template builder |
+| [Packer](https://www.packer.io/) | >= 1.15 | VM template builder |
+| [Ansible](https://docs.ansible.com/) | latest | Post-build provisioning |
 | [pre-commit](https://pre-commit.com/) | >= 4.0.0 | Git hook framework |
 | [Gitleaks](https://github.com/gitleaks/gitleaks) | >= 8.24.0 | Secret detection |
 | [yamllint](https://github.com/adrienverge/yamllint) | latest | YAML linting |
@@ -58,23 +59,30 @@ Set the required secrets in your GitHub repository settings (or export locally f
 
 | Variable | Description |
 |---|---|
-| `PROXMOX_HOSTNAME` | Proxmox API endpoint |
-| `PROXMOX_PACKER_FRAMEWORK_TOKEN_ID` | API token ID |
-| `PROXMOX_PACKER_FRAMEWORK_SECRET` | API token secret |
-| `PROXMOX_NODE` | Target Proxmox node |
-| `DEPLOY_USER_NAME` | Deploy user account name |
-| `DEPLOY_USER_PASSWORD` | Deploy user password |
-| `DEPLOY_USER_PUBLIC_KEY` | Deploy user SSH public key |
+| `PROXMOX_HOSTNAME` | Proxmox API endpoint (secret) |
+| `PROXMOX_PACKER_FRAMEWORK_TOKEN_ID` | API token ID (secret) |
+| `PROXMOX_PACKER_FRAMEWORK_SECRET` | API token secret (secret) |
+| `PROXMOX_NODE` | Target Proxmox node (secret) |
+| `PROXMOX_SKIP_TLS_VERIFY` | Skip TLS verification (variable, default `false`) |
+| `DEPLOY_USER_NAME` | Deploy user account name (secret) |
+| `DEPLOY_USER_PASSWORD` | Deploy user password (secret) |
+| `DEPLOY_USER_PUBLIC_KEY` | Deploy user SSH public key (secret) |
 
 ### 4. Customize the Template
 
-Edit `systems.auto.pkrvars.hcl` to match your environment (VM ID, network, storage pools,
-partitioning scheme, etc.).
+Edit `packer/systems.auto.pkrvars.hcl` to match your environment (VM ID, network, storage pools,
+etc.). Customize `packer/ks.pkrtpl.hcl` if you need to modify the fixed partitioning scheme or the
+Kickstart installation template. Customize `packer/rocky-linux-9.yml` if you need to adjust the
+consumer-owned Ansible entrypoint.
 
 ## Project Structure
 
 ```text
 .
+├── packer/                     # Consumer-owned Packer inputs
+│   ├── ks.pkrtpl.hcl           #   Kickstart template (framework contract)
+│   ├── rocky-linux-9.yml       #   Post-build hardening playbook
+│   └── systems.auto.pkrvars.hcl #  Packer variables (VM configuration)
 ├── .config/                    # Linter and tool configurations
 │   ├── .markdownlint.json      #   Markdown linting rules
 │   └── .yamllint.yaml          #   YAML linting rules
@@ -85,7 +93,7 @@ partitioning scheme, etc.).
 │   ├── pull_request_template.md
 │   ├── ISSUE_TEMPLATE/         # Structured issue forms
 │   └── workflows/
-│       ├── packer.yaml          #   Build & validate pipeline
+│       ├── packer.yaml         #   Build & validate pipeline
 │       ├── security.yaml       #   Trivy + Gitleaks scanning
 │       ├── codeql.yaml         #   CodeQL SAST analysis
 │       └── release-please.yaml #   Automated versioning
@@ -99,7 +107,6 @@ partitioning scheme, etc.).
 ├── .pre-commit-config.yaml     # Git hook definitions
 ├── .release-please-manifest.json
 ├── release-please-config.json
-├── systems.auto.pkrvars.hcl    # Packer variables (VM configuration)
 ├── CHANGELOG.md                # Auto-generated changelog
 ├── CODE_OF_CONDUCT.md          # Contributor Covenant
 ├── CONTRIBUTING.md             # Contribution guidelines
@@ -150,7 +157,7 @@ Press `Ctrl+Shift+B` to run the **Full Validation** composite task, or run indiv
 | **Memory** | 4096 MB |
 | **Disk** | 100 GB (LVM, security-hardened partitioning) |
 | **Network** | virtio adapter, VLAN-tagged |
-| **Provisioning** | Kickstart + Cloud-Init |
+| **Provisioning** | Kickstart (consumer-owned template) + Cloud-Init + Ansible |
 
 ### Disk Partitioning (CIS-Aligned)
 

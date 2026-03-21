@@ -3,9 +3,19 @@
   "tasks": [
     //region ------ [ Packer Core ] ---------------------------------------- #
     {
+      "label": "Packer: Sync Consumer Files",
+      "type": "shell",
+      "command": "Copy-Item -Force \"${workspaceFolder}/packer/systems.auto.pkrvars.hcl\" \"${workspaceFolder}/../proxmox-packer-framework/packer/\"; Copy-Item -Force \"${workspaceFolder}/packer/ks.pkrtpl.hcl\" \"${workspaceFolder}/../proxmox-packer-framework/packer/\"; Copy-Item -Force \"${workspaceFolder}/packer/rocky-linux-9.yml\" \"${workspaceFolder}/../proxmox-packer-framework/packer/\"",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
       "label": "Packer: Format",
       "type": "shell",
       "command": "packer fmt -diff .",
+      "options": {
+        "cwd": "${workspaceFolder}/../proxmox-packer-framework/packer"
+      },
       "group": "build",
       "problemMatcher": []
     },
@@ -13,13 +23,19 @@
       "label": "Packer: Format Check",
       "type": "shell",
       "command": "packer fmt -check -diff .",
+      "options": {
+        "cwd": "${workspaceFolder}/../proxmox-packer-framework/packer"
+      },
       "group": "build",
       "problemMatcher": []
     },
     {
       "label": "Packer: Init",
       "type": "shell",
-      "command": "packer init -upgrade .",
+      "command": "packer init .",
+      "options": {
+        "cwd": "${workspaceFolder}/../proxmox-packer-framework/packer"
+      },
       "group": "build",
       "problemMatcher": []
     },
@@ -27,6 +43,19 @@
       "label": "Packer: Validate",
       "type": "shell",
       "command": "packer validate .",
+      "options": {
+        "cwd": "${workspaceFolder}/../proxmox-packer-framework/packer"
+      },
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Packer: Build",
+      "type": "shell",
+      "command": "packer build -force -timestamp-ui -color=false -on-error=cleanup .",
+      "options": {
+        "cwd": "${workspaceFolder}/../proxmox-packer-framework/packer"
+      },
       "group": "build",
       "problemMatcher": []
     },
@@ -71,6 +100,7 @@
       "label": "Full Validation",
       "dependsOrder": "sequence",
       "dependsOn": [
+        "Packer: Sync Consumer Files",
         "Packer: Format Check",
         "Packer: Init",
         "Packer: Validate",

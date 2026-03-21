@@ -1,0 +1,12 @@
+---
+# ============================================================================================= #
+# Rocky Linux 9 Hardening Playbook                                                             #
+#                                                                                               #
+# Stub playbook for the Proxmox Packer Framework Ansible provisioner.                          #
+# Add roles from ansible-framework as they become available.                                    #
+# ============================================================================================= #
+
+- name: Rocky Linux 9 Hardening
+  hosts: all
+  become: true
+  roles: []

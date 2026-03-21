@@ -5,7 +5,8 @@ on:
   push:
     branches: [ main ]
     paths:
-      - systems.auto.pkrvars.hcl
+      - packer/systems.auto.pkrvars.hcl
+      - packer/**
       - .github/workflows/packer.yaml
 
 permissions:
@@ -46,8 +47,17 @@ jobs:
           fetch-depth: 1
           path: proxmox-packer-framework
           persist-credentials: false
-          ref: main
+          ref: 8bf05ff47c844d56695c9d68353f76b46f27f63a
           repository: NWarila/Proxmox-Packer-Framework
+
+      - name: Checkout Ansible Framework Repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          path: ansible-framework
+          persist-credentials: false
+          ref: e1b52f33d9270b14ba55cdb5810a7a3de0c83b90
+          repository: NWarila/ansible-framework
 
       - name: Perform Prerequisites Validation
         shell: bash
@@ -77,35 +87,58 @@ jobs:
             exit 1
           fi
 
-          echo "Using Packer executable: ${packer_command}"
+          if ! ansible_command="$(command -v ansible-playbook)"; then
+            echo "Required executable not found: ansible-playbook" >&2
+            exit 1
+          fi
 
-      - name: Copy 'systems.auto.pkrvars.hcl' into Packer Framework Folder
+          echo "Using Packer executable: ${packer_command}"
+          echo "Using Ansible executable: ${ansible_command}"
+
+      - name: Copy Consumer Configuration into Packer Framework
         shell: bash
         working-directory: ${{ github.workspace }}
         run: |
           set -euo pipefail
 
-          source_file="${GITHUB_WORKSPACE}/${GITHUB_REPOSITORY##*/}/systems.auto.pkrvars.hcl"
+          consumer_dir="${GITHUB_WORKSPACE}/${GITHUB_REPOSITORY##*/}"
           destination_dir="${GITHUB_WORKSPACE}/proxmox-packer-framework/packer"
-
-          if [[ ! -f "${source_file}" ]]; then
-            echo "Required file not found: ${source_file}" >&2
-            exit 1
-          fi
 
           if [[ ! -d "${destination_dir}" ]]; then
             echo "Packer working directory not found: ${destination_dir}" >&2
             exit 1
           fi
 
-          cp -f "${source_file}" "${destination_dir}/"
+          # Copy pkrvars configuration
+          pkrvars_file="${consumer_dir}/packer/systems.auto.pkrvars.hcl"
+          if [[ ! -f "${pkrvars_file}" ]]; then
+            echo "Required file not found: ${pkrvars_file}" >&2
+            exit 1
+          fi
+          cp -f "${pkrvars_file}" "${destination_dir}/"
+
+          # Copy kickstart template
+          ks_template="${consumer_dir}/packer/ks.pkrtpl.hcl"
+          if [[ ! -f "${ks_template}" ]]; then
+            echo "Required file not found: ${ks_template}" >&2
+            exit 1
+          fi
+          cp -f "${ks_template}" "${destination_dir}/"
+
+          # Copy Ansible playbook
+          ansible_playbook="${consumer_dir}/packer/rocky-linux-9.yml"
+          if [[ ! -f "${ansible_playbook}" ]]; then
+            echo "Required file not found: ${ansible_playbook}" >&2
+            exit 1
+          fi
+          cp -f "${ansible_playbook}" "${destination_dir}/"
 
       - name: Packer Init
         shell: bash
         working-directory: ${{ github.workspace }}/proxmox-packer-framework/packer
         run: |
           set -euo pipefail
-          /usr/bin/packer init -upgrade .
+          /usr/bin/packer init .
 
       - name: Packer fmt
         shell: bash
@@ -126,4 +159,15 @@ jobs:
         working-directory: ${{ github.workspace }}/proxmox-packer-framework/packer
         run: |
           set -euo pipefail
-          /usr/bin/packer build -force -timestamp-ui -color=false -on-error=cleanup .
+          /usr/bin/packer build -force -timestamp-ui -color=false -on-error=cleanup . | tee packer-build.log
+
+      - name: Upload Packer Build Diagnostics
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: packer-build-diagnostics
+          path: |
+            ${{ github.workspace }}/proxmox-packer-framework/packer/packer-build.log
+            ${{ github.workspace }}/proxmox-packer-framework/packer/manifests
+          if-no-files-found: warn
+          retention-days: 14

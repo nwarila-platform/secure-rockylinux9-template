@@ -78,4 +78,7 @@
 !.github/workflows/release-please.yaml
 
 # Include Packer configuration files.
-!systems.auto.pkrvars.hcl
+!packer
+!packer/ks.pkrtpl.hcl
+!packer/rocky-linux-9.yml
+!packer/systems.auto.pkrvars.hcl
