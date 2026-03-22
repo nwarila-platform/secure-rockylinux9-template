@@ -9,4 +9,24 @@
 - name: Rocky Linux 9 Hardening
   hosts: all
   become: true
+  gather_facts: false
+  pre_tasks:
+    - name: Normalize SSH SFTP subsystem before fact gathering
+      ansible.builtin.raw: |
+        set -e
+        if [ -d /etc/ssh/sshd_config.d ]; then
+          find /etc/ssh/sshd_config.d -maxdepth 1 -type f -name '*.conf' -exec \
+            sed -i '/^[#[:space:]]*Subsystem[[:space:]]\+sftp[[:space:]].*/d' {} +
+        fi
+        sed -i '/^[#[:space:]]*Subsystem[[:space:]]\+sftp[[:space:]].*/d' /etc/ssh/sshd_config
+        echo 'Subsystem sftp /usr/libexec/openssh/sftp-server' >> /etc/ssh/sshd_config
+        sshd -t
+        systemctl reload sshd || systemctl restart sshd
+      changed_when: false
+
+    - name: Reset SSH connection after normalizing the SFTP subsystem
+      ansible.builtin.meta: reset_connection
+
+    - name: Gather facts after SSH subsystem normalization
+      ansible.builtin.setup:
   roles: []
