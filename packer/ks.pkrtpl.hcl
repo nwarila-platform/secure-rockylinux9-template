@@ -112,6 +112,8 @@ sshkey --username=${deploy_user_name} "${deploy_user_public_key}"
   # TODO: Move these SSH settings into an sshd_config.d drop-in once the bootstrap flow is ready.
   # Configure the SSH Service To Allow SSH After System Hardening
   sed -ri 's/^#?PermitRootLogin.*/PermitRootLogin no/'               /etc/ssh/sshd_config
+  sed -i 's#^[#[:space:]]*Subsystem[[:space:]]\\+sftp.*#Subsystem sftp /usr/libexec/openssh/sftp-server#' /etc/ssh/sshd_config \
+    || echo 'Subsystem sftp /usr/libexec/openssh/sftp-server' | tee -a /etc/ssh/sshd_config
   echo "AllowGroups ssh-users"                                    >> /etc/ssh/sshd_config
 
   # Configure the deploy user
