@@ -10,6 +10,8 @@
   hosts: all
   become: true
   gather_facts: false
+  vars:
+    ansible_remote_tmp: /opt/ansible/tmp
   pre_tasks:
     - name: Capture SSH SFTP state before normalization
       ansible.builtin.raw: |
@@ -19,6 +21,8 @@
         sshd -T 2>/dev/null | grep '^subsystem' || true
         echo '=== BEFORE: sftp binaries ==='
         ls -l /usr/libexec/openssh/sftp-server /usr/lib/sftp-server 2>&1 || true
+        echo '=== BEFORE: ansible tmp path ==='
+        ls -ld /opt /opt/ansible /opt/ansible/tmp 2>&1 || true
       register: ssh_sftp_state_before
       changed_when: false
 
@@ -38,6 +42,7 @@
         if [ -x /usr/libexec/openssh/sftp-server ] && [ ! -e /usr/lib/sftp-server ]; then
           ln -s /usr/libexec/openssh/sftp-server /usr/lib/sftp-server
         fi
+        install -d -m 0700 -o {{ ansible_user }} -g {{ ansible_user }} {{ ansible_remote_tmp }}
         sshd -t
         systemctl reload sshd || systemctl restart sshd
       changed_when: false
@@ -50,6 +55,8 @@
         sshd -T 2>/dev/null | grep '^subsystem' || true
         echo '=== AFTER: sftp binaries ==='
         ls -l /usr/libexec/openssh/sftp-server /usr/lib/sftp-server 2>&1 || true
+        echo '=== AFTER: ansible tmp path ==='
+        ls -ld /opt /opt/ansible /opt/ansible/tmp 2>&1 || true
       register: ssh_sftp_state_after
       changed_when: false
 
