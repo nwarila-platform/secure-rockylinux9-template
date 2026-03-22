@@ -12,6 +12,7 @@
   gather_facts: false
   vars:
     ansible_remote_tmp: /opt/ansible/tmp
+    ansible_ssh_transfer_method: sftp
   pre_tasks:
     - name: Capture SSH SFTP state before normalization
       ansible.builtin.raw: |
@@ -66,6 +67,21 @@
 
     - name: Reset SSH connection after normalizing the SFTP subsystem
       ansible.builtin.meta: reset_connection
+
+    - name: Verify deploy user can write to the Ansible remote tmp path
+      become: false
+      ansible.builtin.raw: |
+        set -e
+        id
+        touch {{ ansible_remote_tmp }}/.ansible-write-test
+        ls -ld {{ ansible_remote_tmp }} {{ ansible_remote_tmp }}/.ansible-write-test
+        rm -f {{ ansible_remote_tmp }}/.ansible-write-test
+      register: ansible_remote_tmp_probe
+      changed_when: false
+
+    - name: Print deploy-user Ansible remote tmp probe
+      ansible.builtin.debug:
+        var: ansible_remote_tmp_probe.stdout_lines
 
     - name: Gather facts after SSH subsystem normalization
       ansible.builtin.setup:
