@@ -92,7 +92,7 @@ jobs:
       PKR_VAR_proxmox_api_token_id: ${{ secrets.PROXMOX_PACKER_FRAMEWORK_TOKEN_ID }}
       PKR_VAR_proxmox_api_token_secret: ${{ secrets.PROXMOX_PACKER_FRAMEWORK_SECRET }}
       PKR_VAR_proxmox_skip_tls_verify: ${{ vars.PROXMOX_SKIP_TLS_VERIFY || 'false' }}
-      PKR_VAR_proxmox_node: ${{ secrets.PROXMOX_NODE }}
+      PKR_VAR_proxmox_node: ${{ vars.PROXMOX_NODE || '' }}
       PKR_VAR_deploy_user_name: ${{ vars.DEPLOY_USER_NAME || secrets.DEPLOY_USER_NAME }}
     steps:
       - name: Checkout Repository
@@ -195,7 +195,6 @@ jobs:
             "PKR_VAR_proxmox_hostname"
             "PKR_VAR_proxmox_api_token_id"
             "PKR_VAR_proxmox_api_token_secret"
-            "PKR_VAR_proxmox_node"
             "PKR_VAR_deploy_user_name"
           )
 
