@@ -87,6 +87,7 @@ jobs:
       run:
         shell: bash
     env:
+      PACKER_BIN: /usr/bin/packer
       PKR_VAR_proxmox_hostname: ${{ secrets.PROXMOX_HOSTNAME }}
       PKR_VAR_proxmox_api_token_id: ${{ secrets.PROXMOX_PACKER_FRAMEWORK_TOKEN_ID }}
       PKR_VAR_proxmox_api_token_secret: ${{ secrets.PROXMOX_PACKER_FRAMEWORK_SECRET }}
@@ -210,7 +211,6 @@ jobs:
             "ansible-playbook"
             "curl"
             "git"
-            "packer"
             "python3"
             "setsid"
             "sha256sum"
@@ -224,6 +224,14 @@ jobs:
               exit 1
             fi
           done
+
+          if [[ ! -x "${PACKER_BIN}" ]]; then
+            echo "Required Packer executable not found or not executable: ${PACKER_BIN}" >&2
+            exit 1
+          fi
+
+          echo "Using Packer executable: ${PACKER_BIN}"
+          "${PACKER_BIN}" version
 
       - name: Apply Framework Overlay and Sync Consumer Files
         run: |
@@ -244,7 +252,7 @@ jobs:
         working-directory: ${{ github.workspace }}/proxmox-packer-framework/packer
         run: |
           set -euo pipefail
-          packer init .
+          "${PACKER_BIN}" init .
 
       - name: Download and verify secure-packer-bootstrapper Release Bundle
         run: |
@@ -360,8 +368,8 @@ jobs:
 
           ssh-add -l >/dev/null
 
-          packer validate .
-          packer build -force -timestamp-ui -color=false -on-error=cleanup . | tee packer-build.log
+          "${PACKER_BIN}" validate .
+          "${PACKER_BIN}" build -force -timestamp-ui -color=false -on-error=cleanup . | tee packer-build.log
 
       - name: Upload Packer Build Diagnostics
         if: always()
