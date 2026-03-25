@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/NWarila/secure-rockylinux9-template/compare/v1.1.0...v1.1.1) (2026-03-25)
+
+
+### Bug Fixes
+
+* **ci:** restore explicit packer binary path ([#9](https://github.com/NWarila/secure-rockylinux9-template/issues/9)) ([841e4c7](https://github.com/NWarila/secure-rockylinux9-template/commit/841e4c7c199f81c465b2184a922ffb3e28bb45c9))
+
 ## [1.1.0](https://github.com/NWarila/secure-rockylinux9-template/compare/v1.0.0...v1.1.0) (2026-03-25)
 
 
