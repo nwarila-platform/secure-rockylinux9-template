@@ -3,14 +3,14 @@
 # Documentation: https://pre-commit.com                                                        #
 # ============================================================================================= #
 
-minimum_pre_commit_version: "4.0.0"
+minimum_pre_commit_version: "4.5.1"
 
 default_stages: [pre-commit, pre-push]
 
 repos:
   # --- [ General File Quality ] ------------------------------------------------------------- #
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: check-added-large-files
         args: [--maxkb=1024]
@@ -28,7 +28,7 @@ repos:
 
   # --- [ Secret Detection ] ----------------------------------------------------------------- #
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.24.0
+    rev: v8.30.1
     hooks:
       - id: gitleaks
 
@@ -41,25 +41,25 @@ repos:
         language: system
         files: '\.pkr\.hcl$|\.pkrvars\.hcl$|\.pkrtpl\.hcl$'
         pass_filenames: false
-        args: ["."]
+        args: ["packer"]
 
   # --- [ YAML Linting ] -------------------------------------------------------------------- #
   - repo: https://github.com/adrienverge/yamllint
-    rev: v1.37.0
+    rev: v1.38.0
     hooks:
       - id: yamllint
         args: [-c, .config/.yamllint.yaml]
 
   # --- [ Markdown Linting ] ----------------------------------------------------------------- #
   - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.44.0
+    rev: v0.48.0
     hooks:
       - id: markdownlint
         args: [--config, .config/.markdownlint.json]
 
   # --- [ Conventional Commits ] ------------------------------------------------------------- #
   - repo: https://github.com/compilerla/conventional-pre-commit
-    rev: v4.0.0
+    rev: v4.4.0
     hooks:
       - id: conventional-pre-commit
         stages: [commit-msg]

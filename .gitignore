@@ -71,14 +71,25 @@
 !.github/ISSUE_TEMPLATE/config.yml
 !.github/ISSUE_TEMPLATE/bug_report.yml
 !.github/ISSUE_TEMPLATE/feature_request.yml
+!.github/pins/
+!.github/pins/secure-packer-bootstrapper.env
+!.github/scripts/
+!.github/scripts/refresh_secure_packer_bootstrapper_pin.py
 !.github/workflows/
 !.github/workflows/packer.yaml
+!.github/workflows/pr-verify.yaml
+!.github/workflows/refresh-bootstrapper-pin.yaml
 !.github/workflows/security.yaml
 !.github/workflows/codeql.yaml
 !.github/workflows/release-please.yaml
+!tests/
+!tests/test_refresh_secure_packer_bootstrapper_pin.py
+!tests/test_workflow_contract.py
 
 # Include Packer configuration files.
 !packer
+!packer/framework-patches/
+!packer/framework-patches/proxmox-packer-framework-e218ed935af48de91f17afef4532d88878f101f4-secure-bootstrap.patch
 !packer/ks.pkrtpl.hcl
 !packer/rocky-linux-9.yml
 !packer/systems.auto.pkrvars.hcl

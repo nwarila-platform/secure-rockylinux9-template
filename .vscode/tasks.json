@@ -1,36 +1,44 @@
 {
   "version": "2.0.0",
   "tasks": [
-    //region ------ [ Packer Core ] ---------------------------------------- #
+    //region ------ [ Framework Validation ] -------------------------------- #
     {
-      "label": "Packer: Sync Consumer Files",
+      "label": "Framework: Verify Sibling Checkouts",
+      "type": "shell",
+      "command": "if (!(Test-Path \"${workspaceFolder}/../proxmox-packer-framework/packer\")) { throw \"Missing ../proxmox-packer-framework/packer\" }; if (!(Test-Path \"${workspaceFolder}/../ansible-framework/ansible.cfg\")) { throw \"Missing ../ansible-framework/ansible.cfg\" }",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Packer: Sync Consumer Files (Framework Workspace)",
       "type": "shell",
       "command": "Copy-Item -Force \"${workspaceFolder}/packer/systems.auto.pkrvars.hcl\" \"${workspaceFolder}/../proxmox-packer-framework/packer/\"; Copy-Item -Force \"${workspaceFolder}/packer/ks.pkrtpl.hcl\" \"${workspaceFolder}/../proxmox-packer-framework/packer/\"; Copy-Item -Force \"${workspaceFolder}/packer/rocky-linux-9.yml\" \"${workspaceFolder}/../proxmox-packer-framework/packer/\"",
       "group": "build",
       "problemMatcher": []
     },
     {
-      "label": "Packer: Format",
+      "label": "Packer: Apply Secure Bootstrap Overlay (Framework Workspace)",
       "type": "shell",
-      "command": "packer fmt -diff .",
-      "options": {
-        "cwd": "${workspaceFolder}/../proxmox-packer-framework/packer"
-      },
+      "command": "$framework = \"${workspaceFolder}/../proxmox-packer-framework\"; $patch = \"${workspaceFolder}/packer/framework-patches/proxmox-packer-framework-e218ed935af48de91f17afef4532d88878f101f4-secure-bootstrap.patch\"; $expected = \"e218ed935af48de91f17afef4532d88878f101f4\"; if ((git -C $framework rev-parse HEAD).Trim() -ne $expected) { throw \"Expected ../proxmox-packer-framework at $expected\" }; & git -C $framework apply --reverse --check $patch 2>$null; if ($LASTEXITCODE -eq 0) { Write-Host \"Framework overlay already applied.\"; exit 0 }; & git -C $framework apply --check $patch; if ($LASTEXITCODE -ne 0) { throw \"Framework overlay patch no longer applies cleanly.\" }; & git -C $framework apply $patch; if ($LASTEXITCODE -ne 0) { throw \"Failed to apply framework overlay patch.\" }",
       "group": "build",
       "problemMatcher": []
     },
     {
-      "label": "Packer: Format Check",
+      "label": "Packer: Format (Repo Workspace)",
       "type": "shell",
-      "command": "packer fmt -check -diff .",
-      "options": {
-        "cwd": "${workspaceFolder}/../proxmox-packer-framework/packer"
-      },
+      "command": "packer fmt -diff packer",
       "group": "build",
       "problemMatcher": []
     },
     {
-      "label": "Packer: Init",
+      "label": "Packer: Format Check (Repo Workspace)",
+      "type": "shell",
+      "command": "packer fmt -check -diff packer",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Packer: Init (Framework Workspace)",
       "type": "shell",
       "command": "packer init .",
       "options": {
@@ -40,7 +48,17 @@
       "problemMatcher": []
     },
     {
-      "label": "Packer: Validate",
+      "label": "Ansible: Syntax Check (Framework Workspace)",
+      "type": "shell",
+      "command": "$env:ANSIBLE_CONFIG = \"${workspaceFolder}/../ansible-framework/ansible.cfg\"; ansible-playbook --syntax-check -i localhost, -c local \"${workspaceFolder}/../proxmox-packer-framework/packer/rocky-linux-9.yml\"",
+      "options": {
+        "cwd": "${workspaceFolder}/../proxmox-packer-framework/packer"
+      },
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Packer: Validate (Framework Workspace)",
       "type": "shell",
       "command": "packer validate .",
       "options": {
@@ -50,7 +68,7 @@
       "problemMatcher": []
     },
     {
-      "label": "Packer: Build",
+      "label": "Packer: Build (Framework Workspace, Owner Defaults)",
       "type": "shell",
       "command": "packer build -force -timestamp-ui -color=false -on-error=cleanup .",
       "options": {
@@ -59,7 +77,7 @@
       "group": "build",
       "problemMatcher": []
     },
-    //endregion --- [ Packer Core ] ---------------------------------------- #
+    //endregion --- [ Framework Validation ] -------------------------------- #
 
     //region ------ [ Linting & Security ] --------------------------------- #
     {
@@ -97,13 +115,16 @@
 
     //region ------ [ Composite ] ------------------------------------------ #
     {
-      "label": "Full Validation",
+      "label": "Full Validation (Requires sibling frameworks)",
       "dependsOrder": "sequence",
       "dependsOn": [
-        "Packer: Sync Consumer Files",
-        "Packer: Format Check",
-        "Packer: Init",
-        "Packer: Validate",
+        "Framework: Verify Sibling Checkouts",
+        "Packer: Format Check (Repo Workspace)",
+        "Packer: Sync Consumer Files (Framework Workspace)",
+        "Packer: Apply Secure Bootstrap Overlay (Framework Workspace)",
+        "Packer: Init (Framework Workspace)",
+        "Ansible: Syntax Check (Framework Workspace)",
+        "Packer: Validate (Framework Workspace)",
         "YAML Lint",
         "Markdown Lint"
       ],

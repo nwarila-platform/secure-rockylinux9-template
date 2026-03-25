@@ -1,0 +1,135 @@
+name: "Refresh secure-packer-bootstrapper Pin"
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  schedule:
+    - cron: "15 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-bootstrapper-pin-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sync-pr-branch:
+    if: github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout PR Head Branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Checkout Base Workflow Tools
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 1
+          path: .workflow-tools
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.base.sha }}
+
+      - name: Refresh tracked Pin on PR Branch
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 .workflow-tools/.github/scripts/refresh_secure_packer_bootstrapper_pin.py \
+            --repo NWarila/secure-packer-bootstrapper \
+            --output .github/pins/secure-packer-bootstrapper.env \
+            --write \
+            --allow-missing-release
+
+      - name: Commit refreshed Pin to PR Branch
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet -- .github/pins/secure-packer-bootstrapper.env; then
+            echo "PR branch pin already matches the latest published release."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/pins/secure-packer-bootstrapper.env
+          git commit -m "chore(ci): refresh secure-packer-bootstrapper pin"
+
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
+
+  open-refresh-pr:
+    if: github.event_name != 'pull_request_target'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Refresh tracked Pin on Automation Branch
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/refresh_secure_packer_bootstrapper_pin.py \
+            --repo NWarila/secure-packer-bootstrapper \
+            --output .github/pins/secure-packer-bootstrapper.env \
+            --write \
+            --allow-missing-release
+
+      - name: Open or Update Pin Refresh PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet -- .github/pins/secure-packer-bootstrapper.env; then
+            echo "Default branch pin already matches the latest published release."
+            exit 0
+          fi
+
+          branch_name="automation/secure-packer-bootstrapper-pin"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "${branch_name}"
+          git add .github/pins/secure-packer-bootstrapper.env
+          git commit -m "chore(ci): refresh secure-packer-bootstrapper pin"
+
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push --force-with-lease origin "${branch_name}"
+
+          existing_pr_number="$(gh pr list --base main --head "${branch_name}" --state open --json number --jq '.[0].number // empty')"
+          if [[ -n "${existing_pr_number}" ]]; then
+            echo "Refresh PR #${existing_pr_number} already exists."
+            exit 0
+          fi
+
+          gh pr create \
+            --base main \
+            --head "${branch_name}" \
+            --title "chore(ci): refresh secure-packer-bootstrapper pin" \
+            --body "Refreshes the tracked secure-packer-bootstrapper release URLs and SHA256 to the latest published release."
