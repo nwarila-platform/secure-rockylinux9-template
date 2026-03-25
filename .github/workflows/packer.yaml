@@ -40,7 +40,8 @@ jobs:
           pin_file="${GITHUB_WORKSPACE}/.github/pins/secure-packer-bootstrapper.env"
           if [[ ! -f "${pin_file}" ]]; then
             echo "pin_ready=false" >> "${GITHUB_OUTPUT}"
-            echo "::notice title=Bootstrapper pin pending::Skipping privileged build because ${pin_file} does not exist."
+            notice_message="Skipping privileged build because ${pin_file} does not exist."
+            echo "::notice title=Bootstrapper pin pending::${notice_message}"
             exit 0
           fi
 
