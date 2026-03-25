@@ -1,0 +1,160 @@
+name: "PR Verify"
+
+on:
+  pull_request:
+    branches: [main]
+  merge_group:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-verify-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Branch Promotion Gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    env:
+      ACTIONLINT_VERSION: "1.7.8"
+      ACTIONLINT_TAR_SHA256: "be92c2652ab7b6d08425428797ceabeb16e31a781c07bc388456b4e592f3e36a"
+      PACKER_VERSION: "1.15.0"
+      PACKER_ZIP_SHA256: "2fd1149c5c6c7604ced64d7b56638af05f6b7ed3f6835182bc913ddaba1f16b8"
+      PKR_VAR_proxmox_hostname: proxmox.example.test
+      PKR_VAR_proxmox_api_token_id: packer@pam!validation
+      PKR_VAR_proxmox_api_token_secret: validation-secret
+      PKR_VAR_proxmox_node: validation-node
+      PKR_VAR_deploy_user_name: builder
+      PKR_VAR_deploy_user_password: C0mpl1antValidationPassword!
+      PKR_VAR_deploy_user_password_hash: $6$rounds=10000$abcdefghijklmnop$qY5tv1wGXcN0n4DZV1W6D8qA8g9lM2rjL9Y6G7sQ8dH5nD1vS2z2M4rB0Xj3tN1uQwF4L7gD1qK8mF0bN2nU1
+      PKR_VAR_deploy_user_key: >-
+        ssh-rsa
+        AAAAB3NzaC1yc2EAAAADAQABAAABAQCyMockValidationKeyOnly1234567890abcdefghijklmnopqrstuvwxyz
+        builder@example
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Verify tracked secure-packer-bootstrapper Pin
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/refresh_secure_packer_bootstrapper_pin.py \
+            --repo NWarila/secure-packer-bootstrapper \
+            --output .github/pins/secure-packer-bootstrapper.env \
+            --check \
+            --allow-missing-release
+
+      - name: Install Validation Tooling
+        run: |
+          set -euo pipefail
+
+          actionlint_base_url="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}"
+          packer_base_url="https://releases.hashicorp.com/packer/${PACKER_VERSION}"
+
+          curl --fail --silent --show-error --location \
+            --retry 5 --retry-delay 2 --retry-connrefused --connect-timeout 15 \
+            "${actionlint_base_url}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
+            -o /tmp/actionlint.tar.gz
+          printf '%s  %s\n' "${ACTIONLINT_TAR_SHA256}" /tmp/actionlint.tar.gz | sha256sum -c -
+
+          rm -rf /tmp/actionlint-bin
+          mkdir -p /tmp/actionlint-bin
+          tar -xzf /tmp/actionlint.tar.gz -C /tmp/actionlint-bin
+          sudo install -m 0755 /tmp/actionlint-bin/actionlint /usr/local/bin/actionlint
+
+          curl --fail --silent --show-error --location \
+            --retry 5 --retry-delay 2 --retry-connrefused --connect-timeout 15 \
+            "${packer_base_url}/packer_${PACKER_VERSION}_linux_amd64.zip" \
+            -o /tmp/packer.zip
+          curl --fail --silent --show-error --location \
+            --retry 5 --retry-delay 2 --retry-connrefused --connect-timeout 15 \
+            "${packer_base_url}/packer_${PACKER_VERSION}_SHA256SUMS" \
+            -o /tmp/packer_SHA256SUMS
+
+          grep -E \
+            "^${PACKER_ZIP_SHA256}[[:space:]]+packer_${PACKER_VERSION}_linux_amd64\\.zip$" \
+            /tmp/packer_SHA256SUMS >/dev/null
+          printf '%s  %s\n' "${PACKER_ZIP_SHA256}" /tmp/packer.zip | sha256sum -c -
+
+          rm -rf /tmp/packer-bin
+          unzip -oq /tmp/packer.zip -d /tmp/packer-bin
+          sudo install -m 0755 /tmp/packer-bin/packer /usr/local/bin/packer
+
+          python3 -m pip install --upgrade --disable-pip-version-check pip
+          python3 -m pip install --disable-pip-version-check --no-input \
+            ansible-core==2.20.4 \
+            pre-commit==4.5.1 \
+            PyYAML==6.0.3
+
+          packer version
+          actionlint -version
+          ansible-playbook --version
+          pre-commit --version
+
+      - name: Run Automation Unit Tests
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Run actionlint
+        run: |
+          set -euo pipefail
+          actionlint
+
+      - name: Run Repo-Local Gates
+        run: |
+          set -euo pipefail
+          pre-commit run --all-files
+
+      - name: Checkout Packer Framework Repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 1
+          path: proxmox-packer-framework
+          persist-credentials: false
+          ref: e218ed935af48de91f17afef4532d88878f101f4
+          repository: NWarila/Proxmox-Packer-Framework
+
+      - name: Checkout Ansible Framework Repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 1
+          path: ansible-framework
+          persist-credentials: false
+          ref: e1b52f33d9270b14ba55cdb5810a7a3de0c83b90
+          repository: NWarila/ansible-framework
+
+      - name: Apply Framework Overlay and Sync Consumer Files
+        run: |
+          set -euo pipefail
+
+          framework_dir="${GITHUB_WORKSPACE}/proxmox-packer-framework"
+          destination_dir="${framework_dir}/packer"
+          overlay_patch="${GITHUB_WORKSPACE}/packer/framework-patches/proxmox-packer-framework-e218ed935af48de91f17afef4532d88878f101f4-secure-bootstrap.patch"
+
+          git -C "${framework_dir}" apply --check "${overlay_patch}"
+          git -C "${framework_dir}" apply "${overlay_patch}"
+
+          cp -f "${GITHUB_WORKSPACE}/packer/systems.auto.pkrvars.hcl" "${destination_dir}/"
+          cp -f "${GITHUB_WORKSPACE}/packer/ks.pkrtpl.hcl" "${destination_dir}/"
+          cp -f "${GITHUB_WORKSPACE}/packer/rocky-linux-9.yml" "${destination_dir}/"
+
+      - name: Composed Validation
+        working-directory: ${{ github.workspace }}/proxmox-packer-framework/packer
+        env:
+          ANSIBLE_CONFIG: ${{ github.workspace }}/ansible-framework/ansible.cfg
+        run: |
+          set -euo pipefail
+
+          ansible-playbook --syntax-check -i localhost, -c local ./rocky-linux-9.yml
+          packer init .
+          packer validate .

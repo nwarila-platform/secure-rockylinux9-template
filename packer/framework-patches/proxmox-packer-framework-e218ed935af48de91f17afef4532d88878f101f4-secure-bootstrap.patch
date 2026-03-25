@@ -1,0 +1,76 @@
+diff --git a/packer/variables.pkr.hcl b/packer/variables.pkr.hcl
+index 4fb6f22..f39253a 100644
+--- a/packer/variables.pkr.hcl
++++ b/packer/variables.pkr.hcl
+@@ -50,9 +50,22 @@ variable "deploy_user_password" {
+ }
+
+ variable "deploy_user_public_key" {
+   type        = string
++  default     = null
++  description = "Legacy SSH public-key input kept for compatibility with older consumers."
++  sensitive   = true
++}
++
++variable "deploy_user_password_hash" {
++  type        = string
++  description = "The SHA-512 crypt password hash for the deploy user at install time."
++  sensitive   = true
++}
++
++variable "deploy_user_key" {
++  type        = string
+   description = "The SSH public key to log in to the guest operating system."
+   sensitive   = true
+ }
+
+ #endregion --- [ Deploy User ] --------------------------------------------------------------- #
+diff --git a/packer/locals.pkr.hcl b/packer/locals.pkr.hcl
+index a91d64e..5883cc0 100644
+--- a/packer/locals.pkr.hcl
++++ b/packer/locals.pkr.hcl
+@@ -145,9 +145,11 @@ locals {
+   template_vars = {
+
+     # Credentials
+-    deploy_user_name       = var.deploy_user_name
+-    deploy_user_password   = var.deploy_user_password
+-    deploy_user_public_key = var.deploy_user_public_key
++    deploy_user_name          = var.deploy_user_name
++    deploy_user_password      = var.deploy_user_password
++    deploy_user_password_hash = var.deploy_user_password_hash
++    deploy_user_key           = var.deploy_user_key
++    deploy_user_public_key    = coalesce(var.deploy_user_key, var.deploy_user_public_key)
+
+     # Locale
+     os_language = local.packer_image.os_language
+diff --git a/packer/source.pkr.hcl b/packer/source.pkr.hcl
+index 14d9c57..7f94db2 100644
+--- a/packer/source.pkr.hcl
++++ b/packer/source.pkr.hcl
+@@ -14,9 +14,10 @@ source "proxmox-iso" "packer_image" {
+
+   # SSH Configuration (used when communicator = "ssh")
+   ssh_ciphers                 = local.packer_image.communicator == "ssh" ? ["aes128-gcm@openssh.com", "aes128-ctr", "aes192-ctr", "aes256-ctr"] : null
++  ssh_agent_auth              = local.packer_image.communicator == "ssh" ? true : null
+   ssh_host                    = local.packer_image.communicator == "ssh" ? var.network_adapters[0].ipv4_address : null
+   ssh_key_exchange_algorithms = local.packer_image.communicator == "ssh" ? ["ecdh-sha2-nistp256", "ecdh-sha2-nistp384", "ecdh-sha2-nistp521"] : null
+-  ssh_password                = local.packer_image.communicator == "ssh" ? var.deploy_user_password : null
++  ssh_password                = null
+   ssh_port                    = local.packer_image.communicator == "ssh" ? 22 : null
+   ssh_timeout                 = local.packer_image.communicator == "ssh" ? local.packer_image.ssh_timeout : null
+   ssh_username                = local.packer_image.communicator == "ssh" ? var.deploy_user_name : null
+diff --git a/packer/builds.pkr.hcl b/packer/builds.pkr.hcl
+index f5fce13..5a7ed31 100644
+--- a/packer/builds.pkr.hcl
++++ b/packer/builds.pkr.hcl
+@@ -24,8 +24,7 @@ build {
+     extra_arguments = concat(
+       [
+         "--extra-vars", "ansible_user=${var.deploy_user_name}",
+-        "--extra-vars", "ansible_become_pass=${var.deploy_user_password}",
+-        "--extra-vars", "ansible_ssh_pass=${var.deploy_user_password}"
++        "--extra-vars", "ansible_become_pass=${var.deploy_user_password}"
+       ],
+       flatten([for k, v in var.ansible_config.extra_vars : ["--extra-vars", "${k}=${v}"]])
+     )

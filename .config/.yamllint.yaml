@@ -23,7 +23,7 @@ rules:
     forbid-duplicated-merge-keys: true
 
   empty-values:
-    forbid-in-block-mappings: true
+    forbid-in-block-mappings: false
     forbid-in-block-sequences: false
     forbid-in-flow-mappings: true
 

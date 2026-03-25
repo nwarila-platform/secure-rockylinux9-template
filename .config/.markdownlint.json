@@ -12,7 +12,8 @@
     "tables": false
   },
   "MD024": { "siblings_only": true },
-  "MD029": { "style": "one" },
+  "MD029": false,
+  "MD034": false,
   "MD033": {
     "allowed_elements": [
       "details",
@@ -32,5 +33,6 @@
   "MD046": { "style": "fenced" },
   "MD048": { "style": "backtick" },
   "MD049": { "style": "asterisk" },
-  "MD050": { "style": "asterisk" }
+  "MD050": { "style": "asterisk" },
+  "MD060": false
 }

@@ -1,134 +1,116 @@
-### Installs from the first attached CD-ROM/DVD on the system.
+# ------------------------------------------------------------------------------------------------ #
+# Installation Source and Locale                                                                   #
+# ------------------------------------------------------------------------------------------------ #
 cdrom
-
-### Performs the kickstart installation in text mode.
-### By default, kickstart installations are performed in graphical mode.
 text
-
-### Accepts the End User License Agreement.
 eula --agreed
 
-### Sets the language to use during installation and the default language to use on the installed system.
 lang ${os_language}
-
-### Sets the default keyboard type for the system.
 keyboard ${os_keyboard}
+timezone ${os_timezone}
 
-### Configure network information for target system and activate network devices in the installer environment (optional)
-### --onboot	  enable device at a boot time
-### --device	  device to be activated and / or configured with the network command
-### --bootproto	  method to obtain networking configuration for device (default dhcp)
-### --noipv6	  disable IPv6 on this device
+# ------------------------------------------------------------------------------------------------ #
+# Networking and Base Security                                                                     #
+# ------------------------------------------------------------------------------------------------ #
 %{ if network_ipv4_address != null ~}
 network --activate --bootproto=static --device=${network_device} --gateway=${network_ipv4_gateway} --ip=${network_ipv4_address} --nameserver=${join(",", network_dns)} --netmask=${cidrnetmask("${network_ipv4_address}/${network_ipv4_netmask}")} --noipv6 --onboot=yes
 %{ else ~}
 network --bootproto=dhcp --device=${network_device}
 %{ endif ~}
 
-### Lock the root account.
 rootpw --lock
-
-# Configure firewall settings for the system (optional)
-# --enabled	reject incoming connections that are not in response to outbound requests
-# --ssh		allow sshd service through the firewall
 firewall --enabled --ssh
-
-# State of SELinux on the installed system (optional)
-# Defaults to enforcing
 selinux --enforcing
 
-# Set the system time zone (required)
-timezone ${os_timezone}
-
-#region ------ [ Storage Configuration ] ------------------------------------------------------ #
-### Sets how the boot loader should be installed.
+# ------------------------------------------------------------------------------------------------ #
+# Bootloader and Disk Selection                                                                    #
+# ------------------------------------------------------------------------------------------------ #
 %{ if build_bios == "ovmf" ~}
 bootloader --append="crashkernel=no"
 %{ else ~}
 bootloader --location=mbr
 %{ endif ~}
 
-### Initialize any invalid partition tables found on disks.
 zerombr
-
-### Restrict installation and partition wiping to the primary SCSI boot disk used by this template.
 ignoredisk --only-use=sda
-
-### Removes partitions from the system, prior to creation of new partitions.
-### By default, no partitions are removed.
-### --all	Erases all partitions from the system
-### --initlabel Initializes a disk (or disks) by creating a default disk label for all disks in their respective architecture.
 clearpart --all --drives=sda --initlabel
 
-### Storage layout is intentionally fixed in this template rather than variablized via pkrvars.
-### Create primary system partitions.
+# ------------------------------------------------------------------------------------------------ #
+# Fixed Storage Layout                                                                             #
+# ------------------------------------------------------------------------------------------------ #
 part /boot/efi --label=EFIFS --fstype=vfat --fsoptions="nodev,nosuid" --size=1024
 part /boot --label=BOOTFS --fstype=ext4 --fsoptions="nodev,nosuid" --size=1024
 part pv.sysvg --size=100 --grow
 
-### Create a logical volume management (LVM) group.
 volgroup sysvg pv.sysvg
 
-### Create logical volumes.
-logvol swap --name=lv_swap --vgname=sysvg --label=SWAPFS --fstype=swap --size=1024
-logvol / --name=lv_root --vgname=sysvg --label=ROOTFS --fstype=ext4 --size=10240
-logvol /home --name=lv_home --vgname=sysvg --label=HOMEFS --fstype=ext4 --fsoptions="nodev,nosuid,noexec" --size=4096
-logvol /opt --name=lv_opt --vgname=sysvg --label=OPTFS --fstype=ext4 --fsoptions="nodev" --size=2048
-logvol /tmp --name=lv_tmp --vgname=sysvg --label=TMPFS --fstype=ext4 --fsoptions="nodev,noexec,nosuid" --size=4096
-logvol /var --name=lv_var --vgname=sysvg --label=VARFS --fstype=ext4 --fsoptions="nodev" --size=2048
-logvol /var/tmp --name=lv_var_tmp --vgname=sysvg --label=VARTMPFS --fstype=ext4 --fsoptions="nodev,noexec,nosuid" --size=1000
-logvol /var/log --name=lv_var_log --vgname=sysvg --label=VARLOGFS --fstype=ext4 --fsoptions="nodev,noexec,nosuid" --size=4096
-logvol /var/log/audit --name=lv_var_audit --vgname=sysvg --label=AUDITFS --fstype=ext4 --fsoptions="nodev,noexec,nosuid" --size=500
+logvol swap           --name=lv_swap      --vgname=sysvg --label=SWAPFS   --fstype=swap --size=1024
+logvol /              --name=lv_root      --vgname=sysvg --label=ROOTFS   --fstype=ext4 --size=10240
+logvol /home          --name=lv_home      --vgname=sysvg --label=HOMEFS   --fstype=ext4 --fsoptions="nodev,nosuid,noexec" --size=4096
+logvol /opt           --name=lv_opt       --vgname=sysvg --label=OPTFS    --fstype=ext4 --fsoptions="nodev" --size=2048
+logvol /tmp           --name=lv_tmp       --vgname=sysvg --label=TMPFS    --fstype=ext4 --fsoptions="nodev,noexec,nosuid" --size=4096
+logvol /var           --name=lv_var       --vgname=sysvg --label=VARFS    --fstype=ext4 --fsoptions="nodev,nosuid" --size=2048
+logvol /var/tmp       --name=lv_var_tmp   --vgname=sysvg --label=VARTMPFS --fstype=ext4 --fsoptions="nodev,noexec,nosuid" --size=1000
+logvol /var/log       --name=lv_var_log   --vgname=sysvg --label=VARLOGFS --fstype=ext4 --fsoptions="nodev,noexec,nosuid" --size=4096
+logvol /var/log/audit --name=lv_var_audit --vgname=sysvg --label=AUDITFS  --fstype=ext4 --fsoptions="nodev,noexec,nosuid" --size=500
 
-### Do not configure X on the installed system.
+# ------------------------------------------------------------------------------------------------ #
+# Packages, Services, and Baseline Policy                                                         #
+# ------------------------------------------------------------------------------------------------ #
 skipx
 
-### Install Core Package(s)
 %packages --ignoremissing --excludedocs --exclude-weakdeps --inst-langs=en_US
   @^minimal-environment
   -iwl*firmware
+  cloud-init
   qemu-guest-agent
 %end
 
-### Modifies the default set of services that will run under the default runlevel.
-services --enabled=NetworkManager,sshd,qemu-guest-agent
+services --enabled=NetworkManager,sshd,qemu-guest-agent,cloud-init,cloud-config,cloud-final,cloud-init-local
 
-### Apply DISA STIG during install via OpenSCAP add-on
 %addon com_redhat_oscap
   content-type = scap-security-guide
   profile = xccdf_org.ssgproject.content_profile_stig
 %end
 
-### Create the SSH access control group before creating the deploy user.
+# -------------------------------------------------------------------------------------------- #
+# Identity and Access                                                                           #
+# ------------------------------------------------------------------------------------------------ #
 group --name=ssh-users
 
-# Create the deploy user
-user --name=${deploy_user_name} --plaintext --password=${deploy_user_password} --groups=wheel,ssh-users
-sshkey --username=${deploy_user_name} "${deploy_user_public_key}"
+user --name=${deploy_user_name} --iscrypted --password=${deploy_user_password_hash} --groups=wheel,ssh-users
+sshkey --username=${deploy_user_name} "${deploy_user_key}"
 
-### Post-installation commands.
+# ------------------------------------------------------------------------------------------------ #
+# Post-Install Hardening and Compatibility                                                         #
+# ------------------------------------------------------------------------------------------------ #
 %post --erroronfail --log=/root/ks-post.log
 
-  # TODO: Move these SSH settings into an sshd_config.d drop-in once the bootstrap flow is ready.
-  # Configure the SSH Service To Allow SSH After System Hardening
-  sed -ri 's/^#?PermitRootLogin.*/PermitRootLogin no/'               /etc/ssh/sshd_config
-  # Normalize SFTP subsystem configuration across the main sshd_config and any
-  # included drop-ins so the final effective SSH daemon config always points to
-  # the RHEL/Rocky 9 OpenSSH server path.
+  # Normalize SFTP to the Rocky 9 path and keep a compatibility symlink
+  # for tooling that still probes /usr/lib/sftp-server.
   if [ -d /etc/ssh/sshd_config.d ]; then
     find /etc/ssh/sshd_config.d -maxdepth 1 -type f -name '*.conf' -exec \
       sed -i '/^[#[:space:]]*Subsystem[[:space:]]\+sftp[[:space:]].*/d' {} +
   fi
   sed -i '/^[#[:space:]]*Subsystem[[:space:]]\+sftp[[:space:]].*/d' /etc/ssh/sshd_config
-  echo 'Subsystem sftp /usr/libexec/openssh/sftp-server' >> /etc/ssh/sshd_config
-  sshd -t
-  echo "AllowGroups ssh-users"                                    >> /etc/ssh/sshd_config
+  echo "Subsystem sftp /usr/libexec/openssh/sftp-server" >> /etc/ssh/sshd_config
+  install -d -m 0755 /etc/ssh/sshd_config.d
+  cat > /etc/ssh/sshd_config.d/50-build-access.conf <<'EOF'
+AllowGroups ssh-users
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+ChallengeResponseAuthentication no
+PubkeyAuthentication yes
+PermitRootLogin no
+EOF
+  ln -sfn /usr/libexec/openssh/sftp-server /usr/lib/sftp-server
+  restorecon -Rv /etc/ssh/sshd_config.d || true
+  restorecon -v /usr/lib/sftp-server /usr/libexec/openssh/sftp-server /etc/ssh/sshd_config || true
 
-  # Configure the deploy user
+  sshd -t
+
   chage -m 1 -M 60 -W 14 -d $(date +%F) ${deploy_user_name}
 
 %end
 
-# Reboot after the installation is complete (optional)
-# --eject	attempt to eject CD or DVD media before rebooting
 reboot --eject

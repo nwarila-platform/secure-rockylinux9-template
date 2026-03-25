@@ -3,43 +3,170 @@ name: "Packer Build (Proxmox)"
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
-      - packer/systems.auto.pkrvars.hcl
       - packer/**
+      - .github/pins/secure-packer-bootstrapper.env
       - .github/workflows/packer.yaml
 
 permissions:
   contents: read
 
 concurrency:
-  group: packer-${{ github.event.repository.name }}-${{ github.ref }}
+  group: packer-${{ github.repository }}
   cancel-in-progress: false
 
 jobs:
-  packer:
-    runs-on: [self-hosted, Linux, X64]
-    timeout-minutes: 120
-    env:
-      # Proxmox Variables
-      PKR_VAR_proxmox_hostname:         ${{ secrets.PROXMOX_HOSTNAME }}
-      PKR_VAR_proxmox_api_token_id:     ${{ secrets.PROXMOX_PACKER_FRAMEWORK_TOKEN_ID }}
-      PKR_VAR_proxmox_api_token_secret: ${{ secrets.PROXMOX_PACKER_FRAMEWORK_SECRET }}
-      PKR_VAR_proxmox_skip_tls_verify:  ${{ vars.PROXMOX_SKIP_TLS_VERIFY || 'false' }}
-      PKR_VAR_proxmox_node:             ${{ secrets.PROXMOX_NODE }}
-
-      # Deploy User Variables
-      PKR_VAR_deploy_user_name:     ${{ secrets.DEPLOY_USER_NAME }}
-      PKR_VAR_deploy_user_password: ${{ secrets.DEPLOY_USER_PASSWORD }}
-      PKR_VAR_deploy_user_public_key: ${{ secrets.DEPLOY_USER_PUBLIC_KEY }}
-
+  pin-preflight:
+    name: Pin Readiness Preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      pin_ready: ${{ steps.pin-status.outputs.pin_ready }}
+    defaults:
+      run:
+        shell: bash
     steps:
-      - name: Checkout GitHub Repository
+      - name: Checkout Repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          fetch-depth: 1
-          path: ${{ github.event.repository.name }}
           persist-credentials: false
+
+      - name: Evaluate tracked secure-packer-bootstrapper Pin
+        id: pin-status
+        run: |
+          set -euo pipefail
+
+          pin_file="${GITHUB_WORKSPACE}/.github/pins/secure-packer-bootstrapper.env"
+          if [[ ! -f "${pin_file}" ]]; then
+            echo "pin_ready=false" >> "${GITHUB_OUTPUT}"
+            notice_message="Skipping privileged build because ${pin_file} does not exist."
+            echo "::notice title=Bootstrapper pin pending::${notice_message}"
+            exit 0
+          fi
+
+          set -a
+          # shellcheck source=/dev/null
+          . "${pin_file}"
+          set +a
+
+          required_variables=(
+            "SECURE_PACKER_BOOTSTRAPPER_RELEASE_REPO"
+            "SECURE_PACKER_BOOTSTRAPPER_RELEASE_TAG"
+            "SECURE_PACKER_BOOTSTRAPPER_RELEASE_URL"
+            "SECURE_PACKER_BOOTSTRAPPER_RELEASE_SHA256"
+            "SECURE_PACKER_BOOTSTRAPPER_RELEASE_SHA256_URL"
+            "SECURE_PACKER_BOOTSTRAPPER_RELEASE_METADATA_URL"
+          )
+          missing_variables=()
+
+          for variable_name in "${required_variables[@]}"; do
+            variable_value="${!variable_name:-}"
+            if [[ -z "${variable_value//[[:space:]]/}" ]]; then
+              missing_variables+=("${variable_name}")
+            fi
+          done
+
+          if [[ "${#missing_variables[@]}" -gt 0 ]]; then
+            echo "pin_ready=false" >> "${GITHUB_OUTPUT}"
+            printf -v missing_csv '%s, ' "${missing_variables[@]}"
+            missing_csv="${missing_csv%, }"
+            echo "::notice title=Bootstrapper pin pending::Skipping privileged build until a reviewed secure-packer-bootstrapper release populates: ${missing_csv}."
+            exit 0
+          fi
+
+          echo "pin_ready=true" >> "${GITHUB_OUTPUT}"
+
+  packer:
+    needs: pin-preflight
+    if: github.ref == 'refs/heads/main' && needs.pin-preflight.outputs.pin_ready == 'true'
+    runs-on: [self-hosted, Linux, X64]
+    timeout-minutes: 120
+    environment: packer-build
+    defaults:
+      run:
+        shell: bash
+    env:
+      PKR_VAR_proxmox_hostname: ${{ secrets.PROXMOX_HOSTNAME }}
+      PKR_VAR_proxmox_api_token_id: ${{ secrets.PROXMOX_PACKER_FRAMEWORK_TOKEN_ID }}
+      PKR_VAR_proxmox_api_token_secret: ${{ secrets.PROXMOX_PACKER_FRAMEWORK_SECRET }}
+      PKR_VAR_proxmox_skip_tls_verify: ${{ vars.PROXMOX_SKIP_TLS_VERIFY || 'false' }}
+      PKR_VAR_proxmox_node: ${{ secrets.PROXMOX_NODE }}
+      PKR_VAR_deploy_user_name: ${{ vars.DEPLOY_USER_NAME || secrets.DEPLOY_USER_NAME }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Load tracked secure-packer-bootstrapper Pin
+        run: |
+          set -euo pipefail
+
+          pin_file="${GITHUB_WORKSPACE}/.github/pins/secure-packer-bootstrapper.env"
+          trusted_release_repo="NWarila/secure-packer-bootstrapper"
+          if [[ ! -f "${pin_file}" ]]; then
+            echo "Tracked secure-packer-bootstrapper pin file not found: ${pin_file}" >&2
+            exit 1
+          fi
+
+          set -a
+          # shellcheck source=/dev/null
+          . "${pin_file}"
+          set +a
+
+          required_variables=(
+            "SECURE_PACKER_BOOTSTRAPPER_RELEASE_REPO"
+            "SECURE_PACKER_BOOTSTRAPPER_RELEASE_TAG"
+            "SECURE_PACKER_BOOTSTRAPPER_RELEASE_URL"
+            "SECURE_PACKER_BOOTSTRAPPER_RELEASE_SHA256"
+            "SECURE_PACKER_BOOTSTRAPPER_RELEASE_SHA256_URL"
+            "SECURE_PACKER_BOOTSTRAPPER_RELEASE_METADATA_URL"
+          )
+
+          for variable_name in "${required_variables[@]}"; do
+            variable_value="${!variable_name:-}"
+            if [[ -z "${variable_value//[[:space:]]/}" ]]; then
+              echo "Required bootstrapper pin value is not set: ${variable_name}" >&2
+              exit 1
+            fi
+            echo "${variable_name}=${variable_value}" >> "${GITHUB_ENV}"
+          done
+
+          if [[ ! "${SECURE_PACKER_BOOTSTRAPPER_RELEASE_TAG}" =~ ^v[0-9] ]]; then
+            echo "Tracked bootstrapper tag must look like a reviewed release tag (for example v1.2.3)." >&2
+            exit 1
+          fi
+
+          if [[ ! "${SECURE_PACKER_BOOTSTRAPPER_RELEASE_SHA256}" =~ ^[[:xdigit:]]{64}$ ]]; then
+            echo "Tracked bootstrapper SHA256 must be a 64-character hex digest." >&2
+            exit 1
+          fi
+
+          if [[ "${SECURE_PACKER_BOOTSTRAPPER_RELEASE_REPO}" != "${trusted_release_repo}" ]]; then
+            echo "Tracked bootstrapper repo must remain pinned to ${trusted_release_repo}." >&2
+            exit 1
+          fi
+
+          asset_base_url="https://github.com/${trusted_release_repo}/releases/download/${SECURE_PACKER_BOOTSTRAPPER_RELEASE_TAG}"
+          expected_bundle_url="${asset_base_url}/secure-packer-bootstrapper.sh"
+          expected_checksum_url="${asset_base_url}/secure-packer-bootstrapper.sh.sha256"
+          expected_metadata_url="${asset_base_url}/secure-packer-bootstrapper.release.json"
+
+          if [[ "${SECURE_PACKER_BOOTSTRAPPER_RELEASE_URL}" != "${expected_bundle_url}" ]]; then
+            echo "Tracked bootstrapper bundle URL did not match the expected GitHub release asset path." >&2
+            exit 1
+          fi
+
+          if [[ "${SECURE_PACKER_BOOTSTRAPPER_RELEASE_SHA256_URL}" != "${expected_checksum_url}" ]]; then
+            echo "Tracked bootstrapper checksum URL did not match the expected GitHub release asset path." >&2
+            exit 1
+          fi
+
+          if [[ "${SECURE_PACKER_BOOTSTRAPPER_RELEASE_METADATA_URL}" != "${expected_metadata_url}" ]]; then
+            echo "Tracked bootstrapper metadata URL did not match the expected GitHub release asset path." >&2
+            exit 1
+          fi
 
       - name: Checkout Packer Framework Repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -59,9 +186,7 @@ jobs:
           ref: e1b52f33d9270b14ba55cdb5810a7a3de0c83b90
           repository: NWarila/ansible-framework
 
-      - name: Perform Prerequisites Validation
-        shell: bash
-        working-directory: ${{ github.workspace }}
+      - name: Validate Runtime Dependencies
         run: |
           set -euo pipefail
 
@@ -69,9 +194,8 @@ jobs:
             "PKR_VAR_proxmox_hostname"
             "PKR_VAR_proxmox_api_token_id"
             "PKR_VAR_proxmox_api_token_secret"
+            "PKR_VAR_proxmox_node"
             "PKR_VAR_deploy_user_name"
-            "PKR_VAR_deploy_user_password"
-            "PKR_VAR_deploy_user_public_key"
           )
 
           for variable_name in "${required_variables[@]}"; do
@@ -82,92 +206,178 @@ jobs:
             fi
           done
 
-          if ! packer_command="$(command -v packer)"; then
-            echo "Required executable not found: packer" >&2
-            exit 1
-          fi
+          required_commands=(
+            "ansible-playbook"
+            "curl"
+            "git"
+            "packer"
+            "python3"
+            "setsid"
+            "sha256sum"
+            "ssh-add"
+            "ssh-agent"
+          )
 
-          if ! ansible_command="$(command -v ansible-playbook)"; then
-            echo "Required executable not found: ansible-playbook" >&2
-            exit 1
-          fi
+          for command_name in "${required_commands[@]}"; do
+            if ! command -v "${command_name}" >/dev/null 2>&1; then
+              echo "Required executable not found: ${command_name}" >&2
+              exit 1
+            fi
+          done
 
-          echo "Using Packer executable: ${packer_command}"
-          echo "Using Ansible executable: ${ansible_command}"
-
-      - name: Copy Consumer Configuration into Packer Framework
-        shell: bash
-        working-directory: ${{ github.workspace }}
+      - name: Apply Framework Overlay and Sync Consumer Files
         run: |
           set -euo pipefail
 
-          consumer_dir="${GITHUB_WORKSPACE}/${GITHUB_REPOSITORY##*/}"
-          destination_dir="${GITHUB_WORKSPACE}/proxmox-packer-framework/packer"
+          framework_dir="${GITHUB_WORKSPACE}/proxmox-packer-framework"
+          destination_dir="${framework_dir}/packer"
+          overlay_patch="${GITHUB_WORKSPACE}/packer/framework-patches/proxmox-packer-framework-e218ed935af48de91f17afef4532d88878f101f4-secure-bootstrap.patch"
 
-          if [[ ! -d "${destination_dir}" ]]; then
-            echo "Packer working directory not found: ${destination_dir}" >&2
-            exit 1
-          fi
+          git -C "${framework_dir}" apply --check "${overlay_patch}"
+          git -C "${framework_dir}" apply "${overlay_patch}"
 
-          # Copy pkrvars configuration
-          pkrvars_file="${consumer_dir}/packer/systems.auto.pkrvars.hcl"
-          if [[ ! -f "${pkrvars_file}" ]]; then
-            echo "Required file not found: ${pkrvars_file}" >&2
-            exit 1
-          fi
-          cp -f "${pkrvars_file}" "${destination_dir}/"
-
-          # Copy kickstart template
-          ks_template="${consumer_dir}/packer/ks.pkrtpl.hcl"
-          if [[ ! -f "${ks_template}" ]]; then
-            echo "Required file not found: ${ks_template}" >&2
-            exit 1
-          fi
-          cp -f "${ks_template}" "${destination_dir}/"
-
-          # Copy Ansible playbook
-          ansible_playbook="${consumer_dir}/packer/rocky-linux-9.yml"
-          if [[ ! -f "${ansible_playbook}" ]]; then
-            echo "Required file not found: ${ansible_playbook}" >&2
-            exit 1
-          fi
-          cp -f "${ansible_playbook}" "${destination_dir}/"
+          cp -f "${GITHUB_WORKSPACE}/packer/systems.auto.pkrvars.hcl" "${destination_dir}/"
+          cp -f "${GITHUB_WORKSPACE}/packer/ks.pkrtpl.hcl" "${destination_dir}/"
+          cp -f "${GITHUB_WORKSPACE}/packer/rocky-linux-9.yml" "${destination_dir}/"
 
       - name: Packer Init
-        shell: bash
         working-directory: ${{ github.workspace }}/proxmox-packer-framework/packer
         run: |
           set -euo pipefail
-          /usr/bin/packer init .
+          packer init .
 
-      - name: Packer fmt
-        shell: bash
-        working-directory: ${{ github.workspace }}/proxmox-packer-framework/packer
+      - name: Download and verify secure-packer-bootstrapper Release Bundle
         run: |
           set -euo pipefail
-          /usr/bin/packer fmt -check -diff .
+          umask 077
 
-      - name: Packer validate
-        shell: bash
-        working-directory: ${{ github.workspace }}/proxmox-packer-framework/packer
-        run: |
-          set -euo pipefail
-          /usr/bin/packer validate .
+          bootstrap_dir="${RUNNER_TEMP}/secure-packer-bootstrapper"
 
-      - name: Packer build
-        shell: bash
+          rm -rf "${bootstrap_dir}"
+          mkdir -p "${bootstrap_dir}"
+
+          curl --fail --silent --show-error --location \
+            --retry 5 --retry-delay 2 --retry-connrefused --connect-timeout 15 \
+            "${SECURE_PACKER_BOOTSTRAPPER_RELEASE_URL}" \
+            -o "${bootstrap_dir}/secure-packer-bootstrapper.sh"
+          curl --fail --silent --show-error --location \
+            --retry 5 --retry-delay 2 --retry-connrefused --connect-timeout 15 \
+            "${SECURE_PACKER_BOOTSTRAPPER_RELEASE_SHA256_URL}" \
+            -o "${bootstrap_dir}/secure-packer-bootstrapper.sh.sha256"
+          curl --fail --silent --show-error --location \
+            --retry 5 --retry-delay 2 --retry-connrefused --connect-timeout 15 \
+            "${SECURE_PACKER_BOOTSTRAPPER_RELEASE_METADATA_URL}" \
+            -o "${bootstrap_dir}/secure-packer-bootstrapper.release.json"
+
+          downloaded_sha256="$(awk '{print tolower($1)}' "${bootstrap_dir}/secure-packer-bootstrapper.sh.sha256")"
+          if [[ "${downloaded_sha256}" != "${SECURE_PACKER_BOOTSTRAPPER_RELEASE_SHA256}" ]]; then
+            echo "Downloaded secure-packer-bootstrapper checksum does not match the tracked reviewed SHA256." >&2
+            exit 1
+          fi
+
+          printf '%s  %s\n' \
+            "${SECURE_PACKER_BOOTSTRAPPER_RELEASE_SHA256}" \
+            "${bootstrap_dir}/secure-packer-bootstrapper.sh" | sha256sum -c -
+          python3 - \
+            "${bootstrap_dir}/secure-packer-bootstrapper.release.json" \
+            "${SECURE_PACKER_BOOTSTRAPPER_RELEASE_TAG}" \
+            "${SECURE_PACKER_BOOTSTRAPPER_RELEASE_SHA256}" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          metadata_path = pathlib.Path(sys.argv[1])
+          expected_tag = sys.argv[2]
+          expected_sha256 = sys.argv[3]
+          metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+
+          if metadata.get("tag") != expected_tag:
+              raise SystemExit("secure-packer-bootstrapper metadata tag does not match the tracked reviewed tag.")
+
+          if metadata.get("bundle_sha256", "").lower() != expected_sha256.lower():
+              raise SystemExit(
+                  "secure-packer-bootstrapper metadata bundle_sha256 "
+                  "does not match the tracked reviewed SHA256."
+              )
+          PY
+          chmod 700 "${bootstrap_dir}/secure-packer-bootstrapper.sh"
+
+          echo "SECURE_PACKER_BOOTSTRAPPER_BUNDLE=${bootstrap_dir}/secure-packer-bootstrapper.sh" >> "${GITHUB_ENV}"
+          echo "SECURE_PACKER_BOOTSTRAPPER_DIR=${bootstrap_dir}" >> "${GITHUB_ENV}"
+
+      - name: Packer Validate and Build
         working-directory: ${{ github.workspace }}/proxmox-packer-framework/packer
         run: |
           set -euo pipefail
-          /usr/bin/packer build -force -timestamp-ui -color=false -on-error=cleanup . | tee packer-build.log
+          umask 077
+
+          bootstrap_output_dir="${SECURE_PACKER_BOOTSTRAPPER_DIR}/artifacts"
+          askpass_script="${SECURE_PACKER_BOOTSTRAPPER_DIR}/ssh-add-askpass.sh"
+
+          cleanup() {
+            rm -f "${askpass_script}"
+            if [[ -n "${SSH_AGENT_PID:-}" ]]; then
+              ssh-agent -k >/dev/null 2>&1 || true
+            fi
+          }
+          trap cleanup EXIT
+
+          eval "$("${SECURE_PACKER_BOOTSTRAPPER_BUNDLE}" --output-dir "${bootstrap_output_dir}")"
+
+          required_bootstrap_variables=(
+            "PKR_VAR_deploy_user_password"
+            "PKR_VAR_deploy_user_password_hash"
+            "PKR_VAR_deploy_user_key"
+            "SPB_DEPLOY_USER_PASSWORD"
+            "SPB_SSH_PRIVATE_KEY_FILE"
+            "SPB_SSH_KEY_PASSPHRASE"
+          )
+
+          for variable_name in "${required_bootstrap_variables[@]}"; do
+            variable_value="${!variable_name:-}"
+            if [[ -z "${variable_value//[[:space:]]/}" ]]; then
+              echo "secure-packer-bootstrapper did not export the required value: ${variable_name}" >&2
+              exit 1
+            fi
+          done
+
+          if [[ ! -f "${SPB_SSH_PRIVATE_KEY_FILE}" ]]; then
+            echo "secure-packer-bootstrapper did not create the expected SSH private key file." >&2
+            exit 1
+          fi
+
+          cat > "${askpass_script}" <<'EOF'
+          #!/usr/bin/env bash
+          printf '%s\n' "${SPB_SSH_KEY_PASSPHRASE}"
+          EOF
+          chmod 700 "${askpass_script}"
+
+          eval "$(ssh-agent -s)" >/dev/null
+          SSH_ASKPASS="${askpass_script}" \
+          SSH_ASKPASS_REQUIRE=force \
+          DISPLAY=:0 \
+          setsid -w ssh-add "${SPB_SSH_PRIVATE_KEY_FILE}" < /dev/null
+
+          ssh-add -l >/dev/null
+
+          packer validate .
+          packer build -force -timestamp-ui -color=false -on-error=cleanup . | tee packer-build.log
 
       - name: Upload Packer Build Diagnostics
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: packer-build-diagnostics
           path: |
             ${{ github.workspace }}/proxmox-packer-framework/packer/packer-build.log
             ${{ github.workspace }}/proxmox-packer-framework/packer/manifests
+            ${{ github.workspace }}/.github/pins/secure-packer-bootstrapper.env
+            ${{ runner.temp }}/secure-packer-bootstrapper/secure-packer-bootstrapper.release.json
           if-no-files-found: warn
           retention-days: 14
+
+      - name: Cleanup secure-packer-bootstrapper Artifacts
+        if: always()
+        run: |
+          set -euo pipefail
+          rm -rf "${RUNNER_TEMP}/secure-packer-bootstrapper"
