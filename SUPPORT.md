@@ -2,34 +2,49 @@
 
 ## Scope
 
-This repository provides support for:
+This repository supports the consumer-owned profile content and repo automation here:
 
-- The Packer template configuration itself
-- Repository automation and CI/CD workflows
-- Developer tooling and pre-commit hooks
-- Documentation and contribution process
+- `packer/systems.auto.pkrvars.hcl`
+- `packer/ks.pkrtpl.hcl`
+- `packer/rocky-linux-9.yml`
+- repository workflows, issue templates, and contributor tooling
+- repository documentation and release semantics
 
 ## Out of Scope
 
-The following are **not** supported through this repository:
+The following belong elsewhere:
 
-- Troubleshooting Proxmox VE environments
-- Debugging failed infrastructure deployments
-- Credential or secret management guidance
-- Rocky Linux operating system issues (report upstream)
-- Ansible playbook logic in downstream projects
+- `proxmox-packer-framework` build logic, plugin contract, or framework normalization behavior
+- `ansible-framework` reusable roles, shared Ansible config, or role-loader behavior
+- downstream Proxmox runtime operations, VM lifecycle issues, or environment-specific cluster
+  administration
+- credential issuance, certificate management, or broader secret-management policy
+- Rocky Linux distribution bugs or vendor security advisories
 
 ## Getting Help
 
-When requesting help, please include:
+Please include:
 
-- The command you ran and the exact error message
-- Your operating system and tool versions (Packer, Proxmox, etc.)
-- Whether the issue reproduces consistently
-- Any relevant log output or screenshots
+- the exact command or workflow you ran
+- whether you were using repo-local checks, the framework workspace, or the CI build path
+- relevant tool versions (`packer`, `ansible-playbook`, `pre-commit`, Proxmox VE)
+- the exact error output and any relevant log snippets
 
 ## Where to Ask
 
-- **Bugs**: Use the [bug report template](https://github.com/NWarila/Secure-RockyLinux9-Template/issues/new?template=bug_report.yml)
-- **Features**: Use the [feature request template](https://github.com/NWarila/Secure-RockyLinux9-Template/issues/new?template=feature_request.yml)
-- **Security**: See [SECURITY.md](SECURITY.md) for the disclosure process
+- **Bugs in this consumer profile**:
+  [bug report template](https://github.com/NWarila/Secure-RockyLinux9-Template/issues/new?template=bug_report.yml)
+- **Features in this consumer profile**:
+  [feature request template](https://github.com/NWarila/Secure-RockyLinux9-Template/issues/new?template=feature_request.yml)
+- **Security issues**: see [SECURITY.md](SECURITY.md)
+
+## Routing Guide
+
+If you are unsure where an issue belongs:
+
+- consumer values, Kickstart content, bootstrap playbook entrypoint, repo docs:
+  this repository
+- framework-side `packer validate` / `packer build` contract behavior:
+  `proxmox-packer-framework`
+- reusable Rocky Linux hardening roles or shared Ansible behavior:
+  `ansible-framework`

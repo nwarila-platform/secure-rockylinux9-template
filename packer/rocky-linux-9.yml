@@ -2,8 +2,8 @@
 # ============================================================================================= #
 # Rocky Linux 9 Hardening Playbook                                                             #
 #                                                                                               #
-# Stub playbook for the Proxmox Packer Framework Ansible provisioner.                          #
-# Add roles from ansible-framework as they become available.                                    #
+# Consumer bootstrap playbook entrypoint for the Proxmox Packer Framework Ansible provisioner. #
+# Reusable Rocky Linux 9 roles remain upstream in ansible-framework.                           #
 # ============================================================================================= #
 
 - name: Rocky Linux 9 Hardening
@@ -85,4 +85,5 @@
 
     - name: Gather facts after SSH subsystem normalization
       ansible.builtin.setup:
+  # Keep reusable hardening roles upstream; add role names here when Rocky 9 roles land there.
   roles: []

@@ -1,17 +1,26 @@
 # ============================================================================================= #
-# Rocky Linux 9 — UEFI, VirtIO, SSH communicator, DISA STIG Kickstart                         #
+# Rocky Linux 9 - UEFI, VirtIO, SSH communicator, OpenSCAP STIG installer profile              #
 #                                                                                               #
-# Consumer configuration for the Proxmox-Packer-Framework.                                     #
+# Consumer configuration for proxmox-packer-framework.                                          #
+# This file intentionally mixes:                                                                #
+# - reserved owner environment defaults (VMID, node, storage, static networking)               #
+# - security/install contract inputs consumed by the framework                                  #
 # See: https://github.com/NWarila/Proxmox-Packer-Framework/blob/main/docs/template-contract.md #
 # ============================================================================================= #
 packer_image = {
 
   # Proxmox Settings
+  # Lab exception: owner-operated builds currently keep TLS verification disabled until the
+  # Proxmox certificate chain is fixed. CI/local PKR_VAR_proxmox_skip_tls_verify overrides
+  # this nested fallback when supplied.
   insecure_skip_tls_verify = true
 
   # Connection Settings
-  communicator                 = "ssh"
-  ssh_timeout                  = "30m"
+  communicator = "ssh"
+  ssh_timeout  = "30m"
+
+  # Contract placeholders: the current framework object schema still requires these keys even
+  # though this Linux profile uses SSH and leaves all WinRM fields null.
   winrm_timeout                = null
   winrm_port                   = null
   winrm_use_ssl                = null
@@ -29,7 +38,9 @@ packer_image = {
   os_version  = "9"
 
   # General Settings
-  template_description = "Rocky Linux 9 Template built with Packer"
+  # Environment-specific owner defaults below are reserved for the maintainer lab and are not
+  # portable examples for reuse in another Proxmox cluster.
+  template_description = "Rocky Linux 9.7 consumer profile built through proxmox-packer-framework"
   template_name        = "rocky-linux-9-template"
   vm_id                = 9000
   pool                 = "tmpl-golden-pkr"
@@ -63,6 +74,8 @@ packer_image = {
   ]
 
   # VM Configuration: Cloud-Init
+  # This enables template-side Cloud-Init disk wiring. Guest-side cloud-init package readiness
+  # is owned by the Kickstart content in ks.pkrtpl.hcl.
   cloud_init              = true
   cloud_init_disk_type    = "scsi"
   cloud_init_storage_pool = "nvme-pool"
@@ -99,8 +112,8 @@ install_template = {
 
 # --- Ansible Configuration --------------------------------------------------------------- #
 # Consumer-owned Ansible provisioner configuration. The framework handles connection wiring
-# (SSH/WinRM) automatically; consumer owns playbook content and roles.
-# Roles are sourced from: https://github.com/NWarila/ansible-framework
+# automatically; this repo owns the bootstrap playbook entrypoint, while reusable roles remain
+# upstream in: https://github.com/NWarila/ansible-framework
 ansible_config = {
   playbook_path     = "./rocky-linux-9.yml"
   requirements_path = null
@@ -112,9 +125,12 @@ ansible_config = {
 additional_iso_files = []
 
 boot_iso = {
-  cd_label             = "BOOTISO"
-  iso_checksum         = "sha256:8ff2a47e2f3bfe442617fceb7ef289b7b1d2d0502089dbbd505d5368b2b3a90f"
-  iso_file             = "cephFS:iso/Rocky-9.6-x86_64-dvd.iso"
+  cd_label = "BOOTISO"
+  # Verified against Rocky Linux official per-file checksum publication:
+  # https://download.rockylinux.org/pub/rocky/9.7/isos/x86_64/Rocky-9.7-x86_64-dvd.iso.CHECKSUM
+  # Verified: 2026-03-24
+  iso_checksum         = "sha256:d48e902325dce6793935b4e13672a0d9a4f958e02d4e23fcf0a8a34c49ef03da"
+  iso_file             = "cephFS:iso/Rocky-9.7-x86_64-dvd.iso"
   iso_urls             = null
   index                = 0
   iso_download_pve     = null
@@ -145,11 +161,13 @@ efi_config = {
   efi_format        = "raw"
   efi_storage_pool  = "nvme-pool"
   efi_type          = "4m"
-  pre_enrolled_keys = false
+  pre_enrolled_keys = true
 }
 
 network_adapters = [
   {
+    # Reserved owner lab allocation. Change before reuse outside the maintainer environment, or
+    # set ipv4_address to null and let the framework/Kickstart path use DHCP instead.
     ipv4_address  = "10.69.128.200"
     ipv4_netmask  = 24
     ipv4_gateway  = "10.69.128.1"

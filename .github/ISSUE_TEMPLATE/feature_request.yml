@@ -6,6 +6,16 @@ assignees:
   - NWarila
 
 body:
+  - type: markdown
+    attributes:
+      value: |
+        This repository owns the consumer profile and repo automation.
+
+        Requests for framework-side Packer behavior usually belong in
+        `proxmox-packer-framework`.
+
+        Requests for reusable Ansible roles usually belong in `ansible-framework`.
+
   - type: textarea
     id: problem
     attributes:
@@ -32,15 +42,16 @@ body:
     id: scope
     attributes:
       label: Scope
-      description: Which area of the project does this affect?
+      description: Which boundary does this request affect most directly?
       options:
-        - Packer configuration
-        - Kickstart / OS hardening
-        - Ansible provisioning
+        - Consumer profile values / defaults (this repo)
+        - Kickstart / guest baseline (this repo)
+        - Bootstrap playbook entrypoint (this repo)
+        - Packer framework build logic (`proxmox-packer-framework`)
+        - Ansible roles / shared config (`ansible-framework`)
         - CI/CD workflows
-        - Pre-commit hooks
-        - Developer tooling
-        - Documentation
+        - Developer tooling / pre-commit
+        - Documentation / release semantics
         - Other
     validations:
       required: true

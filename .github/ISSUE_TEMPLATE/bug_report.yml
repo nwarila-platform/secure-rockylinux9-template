@@ -6,6 +6,17 @@ assignees:
   - NWarila
 
 body:
+  - type: markdown
+    attributes:
+      value: |
+        This repository owns the consumer profile under `packer/`.
+
+        If the issue is in framework-side Packer build logic or variable normalization, it may
+        belong in `proxmox-packer-framework`.
+
+        If the issue is in reusable Ansible roles or shared Ansible config, it may belong in
+        `ansible-framework`.
+
   - type: textarea
     id: description
     attributes:
@@ -28,8 +39,9 @@ body:
       label: Steps to Reproduce
       description: Step-by-step instructions to reproduce the issue.
       placeholder: |
-        1. Run `packer build ...`
-        2. Observe error in ...
+        1. Run the documented repo-local or framework-aware validation path
+        2. Note the exact command you used
+        3. Observe the error
     validations:
       required: true
 
@@ -44,7 +56,7 @@ body:
     id: packer-version
     attributes:
       label: Packer Version
-      placeholder: "1.12.0"
+      placeholder: "e.g. 1.15.0"
     validations:
       required: true
 
@@ -52,7 +64,7 @@ body:
     id: os
     attributes:
       label: Operating System
-      placeholder: "Rocky Linux 9.6 / Ubuntu 24.04 / Windows 11"
+      placeholder: "e.g. Rocky Linux 9.7 / Ubuntu 24.04 / Windows 11"
     validations:
       required: true
 

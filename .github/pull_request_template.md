@@ -20,11 +20,18 @@ Fixes #
 - [ ] Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/) format
 - [ ] `pre-commit run --all-files` passes locally
 - [ ] Documentation updated (if applicable)
-- [ ] Changes tested locally
+- [ ] Testing notes below say whether validation was repo-local, framework-aware, or CI-only
 
 ## Testing
 
-<!-- Describe any testing performed. -->
+<!--
+Describe what you ran and which boundary it covered.
+
+Examples:
+- repo-local: pre-commit run --all-files
+- framework-aware: sibling framework checkout + ansible syntax check + packer validate
+- CI-only: self-hosted runner / Proxmox path
+-->
 
 ## Additional Notes
 
