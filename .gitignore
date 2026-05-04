@@ -88,8 +88,6 @@
 
 # Include Packer configuration files.
 !packer
-!packer/framework-patches/
-!packer/framework-patches/proxmox-packer-framework-e218ed935af48de91f17afef4532d88878f101f4-secure-bootstrap.patch
 !packer/ks.pkrtpl.hcl
 !packer/rocky-linux-9.yml
 !packer/systems.auto.pkrvars.hcl

@@ -175,8 +175,9 @@ jobs:
           fetch-depth: 1
           path: proxmox-packer-framework
           persist-credentials: false
-          ref: e218ed935af48de91f17afef4532d88878f101f4
-          repository: NWarila/Proxmox-Packer-Framework
+          # v0.0.1 — secure-packer-bootstrapper credential contract is now native to the framework.
+          ref: 9b7701638f7fc091abd19412b84f162ba0dc65ac
+          repository: nwarila-platform/proxmox-packer-framework
 
       - name: Checkout Ansible Framework Repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -185,7 +186,7 @@ jobs:
           path: ansible-framework
           persist-credentials: false
           ref: e1b52f33d9270b14ba55cdb5810a7a3de0c83b90
-          repository: NWarila/ansible-framework
+          repository: nwarila-platform/ansible-framework
 
       - name: Validate Runtime Dependencies
         run: |
@@ -233,16 +234,11 @@ jobs:
           echo "Using Packer executable: ${PACKER_BIN}"
           "${PACKER_BIN}" version
 
-      - name: Apply Framework Overlay and Sync Consumer Files
+      - name: Sync Consumer Files Into Framework Checkout
         run: |
           set -euo pipefail
 
-          framework_dir="${GITHUB_WORKSPACE}/proxmox-packer-framework"
-          destination_dir="${framework_dir}/packer"
-          overlay_patch="${GITHUB_WORKSPACE}/packer/framework-patches/proxmox-packer-framework-e218ed935af48de91f17afef4532d88878f101f4-secure-bootstrap.patch"
-
-          git -C "${framework_dir}" apply --check "${overlay_patch}"
-          git -C "${framework_dir}" apply "${overlay_patch}"
+          destination_dir="${GITHUB_WORKSPACE}/proxmox-packer-framework/packer"
 
           cp -f "${GITHUB_WORKSPACE}/packer/systems.auto.pkrvars.hcl" "${destination_dir}/"
           cp -f "${GITHUB_WORKSPACE}/packer/ks.pkrtpl.hcl" "${destination_dir}/"

@@ -21,21 +21,19 @@ upstream in [ansible-framework](https://github.com/NWarila/ansible-framework).
 1. This repository owns the consumer profile inputs:
    `packer/systems.auto.pkrvars.hcl`, `packer/ks.pkrtpl.hcl`, and `packer/rocky-linux-9.yml`.
 2. CI checks out `proxmox-packer-framework` and `ansible-framework` at exact SHAs.
-3. CI currently applies a repo-owned compatibility overlay to the pinned `proxmox-packer-framework`
-   commit until the secure-bootstrap contract is published upstream.
-4. CI copies this repo's consumer files into `proxmox-packer-framework/packer`.
-5. Packer validation and builds run in the framework checkout, not in this repo alone.
+3. CI copies this repo's consumer files into `proxmox-packer-framework/packer`.
+4. Packer validation and builds run in the framework checkout, not in this repo alone.
 
 ## Validated With
 
-As of March 25, 2026, the composed CI path is pinned to:
+As of May 4, 2026, the composed CI path is pinned to:
 
 | Component | Exact version / pin | Source of truth |
 |---|---|---|
 | Packer | `1.15.0` | `proxmox-packer-framework/packer/packer.pkr.hcl` |
-| `proxmox-packer-framework` | `e218ed935af48de91f17afef4532d88878f101f4` | `.github/workflows/packer.yaml` |
+| `proxmox-packer-framework` | `9b7701638f7fc091abd19412b84f162ba0dc65ac` (`v0.0.1`) | `.github/workflows/packer.yaml` |
 | `ansible-framework` | `e1b52f33d9270b14ba55cdb5810a7a3de0c83b90` | `.github/workflows/packer.yaml` |
-| Rocky install media | `Rocky-9.7-x86_64-dvd.iso` | `packer/systems.auto.pkrvars.hcl` |
+| Rocky install media | `Rocky-9.6-x86_64-dvd.iso` | `packer/systems.auto.pkrvars.hcl` |
 
 The pinned `ansible-framework` commit currently publishes `Ansible Core >= 2.17` and
 `Python >= 3.12` as its baseline. Rocky Linux 9 reusable hardening roles are still upstream work,
@@ -159,7 +157,6 @@ CI uses the generated SSH key for first-hop login, the generated password hash f
 |-- .config/                      # Markdown/YAML lint configuration
 |-- .vscode/                      # Editor tasks/settings for the multi-repo workflow
 |-- packer/
-|   |-- framework-patches/        # Temporary framework compatibility overlay
 |   |-- ks.pkrtpl.hcl            # Consumer-owned Kickstart template
 |   |-- rocky-linux-9.yml        # Consumer-owned bootstrap playbook entrypoint
 |   `-- systems.auto.pkrvars.hcl # Consumer-owned framework input profile
@@ -188,10 +185,9 @@ The real contract test for this repo happens after the consumer files are copied
 `../proxmox-packer-framework/packer` (local tasks) or
 `${{ github.workspace }}/proxmox-packer-framework/packer` (CI). That composed path performs:
 
-1. Apply the repo-owned compatibility overlay to the pinned framework checkout
-2. Ansible syntax check against the pinned `../ansible-framework/ansible.cfg`
-3. `packer init`
-4. `packer validate`
+1. Ansible syntax check against the pinned `../ansible-framework/ansible.cfg`
+2. `packer init`
+3. `packer validate`
 
 ### Branch-promotion gates
 
@@ -202,8 +198,7 @@ The PR workflow path owns the non-privileged gates:
 3. Run `pre-commit run --all-files`
 4. Verify the pinned Packer download against the tracked SHA256 before installing it
 5. Check out the pinned framework repositories
-6. Apply the repo-owned framework compatibility overlay
-7. Run Ansible syntax validation plus composed `packer init` / `packer validate`
+6. Run Ansible syntax validation plus composed `packer init` / `packer validate`
 
 ### Full integration build
 
@@ -227,7 +222,7 @@ Framework-aware tasks are labeled explicitly and expect adjacent `proxmox-packer
 
 | Workflow | Trigger | Purpose |
 |---|---|---|
-| **PR Verify** | Pull requests to `main` | Run branch-promotion gates: pin freshness, automation unit tests, repo-local checks, verified tool bootstrap, framework overlay validation, Ansible syntax validation, and composed `packer validate` |
+| **PR Verify** | Pull requests to `main` | Run branch-promotion gates: pin freshness, automation unit tests, repo-local checks, verified tool bootstrap, Ansible syntax validation, and composed `packer validate` |
 | **Refresh secure-packer-bootstrapper Pin** | PR sync, weekly schedule, manual | Refresh the tracked release URLs and SHA256 in `.github/pins/secure-packer-bootstrapper.env` |
 | **Packer Build** | Push to `main`, manual on `main` only | Run the trusted deployment path only: load the reviewed release pin, mint runtime credentials, perform final `packer validate`, and build |
 | **Security Scan** | Push, PR, weekly schedule | Trivy filesystem/secret scan plus Gitleaks history scan |
