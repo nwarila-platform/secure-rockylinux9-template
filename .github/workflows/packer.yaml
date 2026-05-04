@@ -105,7 +105,7 @@ jobs:
           set -euo pipefail
 
           pin_file="${GITHUB_WORKSPACE}/.github/pins/secure-packer-bootstrapper.env"
-          trusted_release_repo="NWarila/secure-packer-bootstrapper"
+          trusted_release_repo="nwarila-platform/secure-packer-bootstrapper"
           if [[ ! -f "${pin_file}" ]]; then
             echo "Tracked secure-packer-bootstrapper pin file not found: ${pin_file}" >&2
             exit 1

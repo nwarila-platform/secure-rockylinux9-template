@@ -48,7 +48,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 .github/scripts/refresh_secure_packer_bootstrapper_pin.py \
-            --repo NWarila/secure-packer-bootstrapper \
+            --repo nwarila-platform/secure-packer-bootstrapper \
             --output .github/pins/secure-packer-bootstrapper.env \
             --check \
             --allow-missing-release

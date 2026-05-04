@@ -2,7 +2,7 @@
 # Rocky Linux 9 — UEFI, VirtIO, SSH communicator, DISA STIG Kickstart                         #
 #                                                                                               #
 # Consumer configuration for the Proxmox-Packer-Framework.                                     #
-# See: https://github.com/NWarila/Proxmox-Packer-Framework/blob/main/docs/template-contract.md #
+# See: https://github.com/nwarila-platform/proxmox-packer-framework/blob/main/docs/template-contract.md #
 # ============================================================================================= #
 packer_image = {
 
@@ -100,7 +100,7 @@ install_template = {
 # --- Ansible Configuration --------------------------------------------------------------- #
 # Consumer-owned Ansible provisioner configuration. The framework handles connection wiring
 # (SSH/WinRM) automatically; consumer owns playbook content and roles.
-# Roles are sourced from: https://github.com/NWarila/ansible-framework
+# Roles are sourced from: https://github.com/nwarila-platform/ansible-framework
 ansible_config = {
   playbook_path     = "./rocky-linux-9.yml"
   requirements_path = null

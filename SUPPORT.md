@@ -30,6 +30,6 @@ When requesting help, please include:
 
 ## Where to Ask
 
-- **Bugs**: Use the [bug report template](https://github.com/NWarila/Secure-RockyLinux9-Template/issues/new?template=bug_report.yml)
-- **Features**: Use the [feature request template](https://github.com/NWarila/Secure-RockyLinux9-Template/issues/new?template=feature_request.yml)
+- **Bugs**: Use the [bug report template](https://github.com/nwarila-platform/secure-rockylinux9-template/issues/new?template=bug_report.yml)
+- **Features**: Use the [feature request template](https://github.com/nwarila-platform/secure-rockylinux9-template/issues/new?template=feature_request.yml)
 - **Security**: See [SECURITY.md](SECURITY.md) for the disclosure process
