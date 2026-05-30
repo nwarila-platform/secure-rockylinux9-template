@@ -1,7 +1,7 @@
 # Secure Rocky Linux 9 Template
 
-[![Packer Build](https://github.com/NWarila/Secure-RockyLinux9-Template/actions/workflows/packer.yaml/badge.svg)](https://github.com/NWarila/Secure-RockyLinux9-Template/actions/workflows/packer.yaml)
-[![Security Scan](https://github.com/NWarila/Secure-RockyLinux9-Template/actions/workflows/security.yaml/badge.svg)](https://github.com/NWarila/Secure-RockyLinux9-Template/actions/workflows/security.yaml)
+[![Packer Build](https://github.com/nwarila-platform/secure-rockylinux9-template/actions/workflows/packer.yaml/badge.svg)](https://github.com/nwarila-platform/secure-rockylinux9-template/actions/workflows/packer.yaml)
+[![Security Scan](https://github.com/nwarila-platform/secure-rockylinux9-template/actions/workflows/security.yaml/badge.svg)](https://github.com/nwarila-platform/secure-rockylinux9-template/actions/workflows/security.yaml)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -10,11 +10,11 @@ A security-hardened Rocky Linux 9 consumer profile for
 [Proxmox VE](https://www.proxmox.com/en/proxmox-virtual-environment/overview). This repository
 does not ship standalone `.pkr.hcl` builders. Instead, it owns the consumer inputs under
 `packer/` that are copied into
-[proxmox-packer-framework](https://github.com/NWarila/proxmox-packer-framework), where the
+[proxmox-packer-framework](https://github.com/nwarila-platform/proxmox-packer-framework), where the
 composed validation and privileged `packer build` steps run. Formatting stays in the repo-local
 and PR-gated path instead of the trusted deployment runner. The
 tracked Ansible playbook here is the consumer bootstrap entrypoint; reusable Ansible roles remain
-upstream in [ansible-framework](https://github.com/NWarila/ansible-framework).
+upstream in [ansible-framework](https://github.com/nwarila-platform/ansible-framework).
 
 ## How This Repo Fits
 
@@ -80,9 +80,9 @@ so this repo currently owns the bootstrap playbook entrypoint only.
 ### 1. Clone This Repo and the Required Sibling Frameworks
 
 ```bash
-git clone https://github.com/NWarila/Secure-RockyLinux9-Template.git
-git clone https://github.com/NWarila/proxmox-packer-framework.git
-git clone https://github.com/NWarila/ansible-framework.git
+git clone https://github.com/nwarila-platform/secure-rockylinux9-template.git
+git clone https://github.com/nwarila-platform/proxmox-packer-framework.git
+git clone https://github.com/nwarila-platform/ansible-framework.git
 ```
 
 The default VS Code tasks and the composed local validation path expect these sibling directories:

@@ -129,7 +129,7 @@ class WorkflowContractTests(unittest.TestCase):
             "SECURE_PACKER_BOOTSTRAPPER_RELEASE_METADATA_URL",
         }
         self.assertEqual(set(values), required_keys)
-        self.assertEqual(values["SECURE_PACKER_BOOTSTRAPPER_RELEASE_REPO"], "NWarila/secure-packer-bootstrapper")
+        self.assertEqual(values["SECURE_PACKER_BOOTSTRAPPER_RELEASE_REPO"], "nwarila-platform/secure-packer-bootstrapper")
 
         tracked_values = [
             values["SECURE_PACKER_BOOTSTRAPPER_RELEASE_TAG"],

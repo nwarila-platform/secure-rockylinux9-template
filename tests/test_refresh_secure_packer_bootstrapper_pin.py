@@ -44,7 +44,7 @@ class RefreshSecurePackerBootstrapperPinTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.module.validate_release_asset_url(
                 "http://example.com/bundle.sh",
-                "NWarila/secure-packer-bootstrapper",
+                "nwarila-platform/secure-packer-bootstrapper",
                 "v1.2.3",
                 "secure-packer-bootstrapper.sh",
             )
@@ -55,15 +55,15 @@ class RefreshSecurePackerBootstrapperPinTests(unittest.TestCase):
             "assets": [
                 {
                     "name": "secure-packer-bootstrapper.sh",
-                    "browser_download_url": "https://github.com/NWarila/secure-packer-bootstrapper/releases/download/v1.2.3/secure-packer-bootstrapper.sh",
+                    "browser_download_url": "https://github.com/nwarila-platform/secure-packer-bootstrapper/releases/download/v1.2.3/secure-packer-bootstrapper.sh",
                 },
                 {
                     "name": "secure-packer-bootstrapper.sh.sha256",
-                    "browser_download_url": "https://github.com/NWarila/secure-packer-bootstrapper/releases/download/v1.2.3/secure-packer-bootstrapper.sh.sha256",
+                    "browser_download_url": "https://github.com/nwarila-platform/secure-packer-bootstrapper/releases/download/v1.2.3/secure-packer-bootstrapper.sh.sha256",
                 },
                 {
                     "name": "secure-packer-bootstrapper.release.json",
-                    "browser_download_url": "https://github.com/NWarila/secure-packer-bootstrapper/releases/download/v1.2.3/secure-packer-bootstrapper.release.json",
+                    "browser_download_url": "https://github.com/nwarila-platform/secure-packer-bootstrapper/releases/download/v1.2.3/secure-packer-bootstrapper.release.json",
                 },
             ],
         }
@@ -76,7 +76,7 @@ class RefreshSecurePackerBootstrapperPinTests(unittest.TestCase):
         argv = [
             str(SCRIPT_PATH),
             "--repo",
-            "NWarila/secure-packer-bootstrapper",
+            "nwarila-platform/secure-packer-bootstrapper",
             "--output",
             str(output_path),
             "--write",
@@ -93,7 +93,7 @@ class RefreshSecurePackerBootstrapperPinTests(unittest.TestCase):
         rendered = output_path.read_text(encoding="utf-8")
         self.assertIn("SECURE_PACKER_BOOTSTRAPPER_RELEASE_TAG=v1.2.3", rendered)
         self.assertIn(
-            "SECURE_PACKER_BOOTSTRAPPER_RELEASE_URL=https://github.com/NWarila/secure-packer-bootstrapper/releases/download/v1.2.3/secure-packer-bootstrapper.sh",
+            "SECURE_PACKER_BOOTSTRAPPER_RELEASE_URL=https://github.com/nwarila-platform/secure-packer-bootstrapper/releases/download/v1.2.3/secure-packer-bootstrapper.sh",
             rendered,
         )
         self.assertIn(
@@ -110,7 +110,7 @@ class RefreshSecurePackerBootstrapperPinTests(unittest.TestCase):
         argv = [
             str(SCRIPT_PATH),
             "--repo",
-            "NWarila/secure-packer-bootstrapper",
+            "nwarila-platform/secure-packer-bootstrapper",
             "--output",
             str(output_path),
             "--check",
@@ -131,7 +131,7 @@ class RefreshSecurePackerBootstrapperPinTests(unittest.TestCase):
             "assets": [
                 {
                     "name": "secure-packer-bootstrapper.sh",
-                    "browser_download_url": "https://github.com/NWarila/secure-packer-bootstrapper/releases/download/v1.2.3/secure-packer-bootstrapper.sh",
+                    "browser_download_url": "https://github.com/nwarila-platform/secure-packer-bootstrapper/releases/download/v1.2.3/secure-packer-bootstrapper.sh",
                 }
             ],
         }
@@ -144,7 +144,7 @@ class RefreshSecurePackerBootstrapperPinTests(unittest.TestCase):
         argv = [
             str(SCRIPT_PATH),
             "--repo",
-            "NWarila/secure-packer-bootstrapper",
+            "nwarila-platform/secure-packer-bootstrapper",
             "--output",
             str(output_path),
             "--check",

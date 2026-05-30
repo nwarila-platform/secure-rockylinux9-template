@@ -79,10 +79,29 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # The gitleaks-action wrapper requires a paid GITLEAKS_LICENSE for
+      # organization repos; the gitleaks binary itself is free. Run the
+      # SHA-pinned binary directly (mirrors the actionlint/packer download
+      # pattern in pr-verify.yaml) so the secret scan needs no license.
       - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_ENABLE_COMMENTS: "false"
-          GITLEAKS_ENABLE_SUMMARY: "true"
-          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "true"
+          GITLEAKS_VERSION: "8.30.1"
+          GITLEAKS_TAR_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+        run: |
+          set -euo pipefail
+
+          base_url="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+
+          curl --fail --silent --show-error --location \
+            --retry 5 --retry-delay 2 --retry-connrefused --connect-timeout 15 \
+            "${base_url}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            -o /tmp/gitleaks.tar.gz
+          printf '%s  %s\n' "${GITLEAKS_TAR_SHA256}" /tmp/gitleaks.tar.gz | sha256sum -c -
+
+          rm -rf /tmp/gitleaks-bin
+          mkdir -p /tmp/gitleaks-bin
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp/gitleaks-bin
+          sudo install -m 0755 /tmp/gitleaks-bin/gitleaks /usr/local/bin/gitleaks
+
+          gitleaks version
+          gitleaks dir . --redact --no-banner
