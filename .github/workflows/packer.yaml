@@ -79,7 +79,15 @@ jobs:
 
   packer:
     needs: pin-preflight
-    if: github.ref == 'refs/heads/main' && needs.pin-preflight.outputs.pin_ready == 'true'
+    # Auto-build on push to main is gated behind the PACKER_BUILD_ENABLED repo
+    # variable so merging a packer change does not dispatch a self-hosted build
+    # before the [self-hosted, Linux, X64] runner with Proxmox reach and the
+    # packer-build environment secrets are confirmed online. Set
+    # vars.PACKER_BUILD_ENABLED=true (or run workflow_dispatch) for a live build.
+    if: >-
+      github.ref == 'refs/heads/main'
+      && needs.pin-preflight.outputs.pin_ready == 'true'
+      && (github.event_name == 'workflow_dispatch' || vars.PACKER_BUILD_ENABLED == 'true')
     runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 120
     environment: packer-build
@@ -105,7 +113,7 @@ jobs:
           set -euo pipefail
 
           pin_file="${GITHUB_WORKSPACE}/.github/pins/secure-packer-bootstrapper.env"
-          trusted_release_repo="NWarila/secure-packer-bootstrapper"
+          trusted_release_repo="nwarila-platform/secure-packer-bootstrapper"
           if [[ ! -f "${pin_file}" ]]; then
             echo "Tracked secure-packer-bootstrapper pin file not found: ${pin_file}" >&2
             exit 1
@@ -176,7 +184,7 @@ jobs:
           path: proxmox-packer-framework
           persist-credentials: false
           ref: e218ed935af48de91f17afef4532d88878f101f4
-          repository: NWarila/Proxmox-Packer-Framework
+          repository: nwarila-platform/proxmox-packer-framework
 
       - name: Checkout Ansible Framework Repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -185,7 +193,7 @@ jobs:
           path: ansible-framework
           persist-credentials: false
           ref: e1b52f33d9270b14ba55cdb5810a7a3de0c83b90
-          repository: NWarila/ansible-framework
+          repository: nwarila-platform/ansible-framework
 
       - name: Validate Runtime Dependencies
         run: |

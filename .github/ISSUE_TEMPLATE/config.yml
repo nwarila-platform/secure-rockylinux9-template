@@ -2,9 +2,9 @@ blank_issues_enabled: false
 
 contact_links:
   - name: Support & Questions
-    url: https://github.com/NWarila/Secure-RockyLinux9-Template/blob/main/SUPPORT.md
+    url: https://github.com/nwarila-platform/secure-rockylinux9-template/blob/main/SUPPORT.md
     about: Review the support guide before opening an issue.
 
   - name: Security Vulnerability
-    url: https://github.com/NWarila/Secure-RockyLinux9-Template/blob/main/SECURITY.md
+    url: https://github.com/nwarila-platform/secure-rockylinux9-template/blob/main/SECURITY.md
     about: Report security vulnerabilities through the coordinated disclosure process.

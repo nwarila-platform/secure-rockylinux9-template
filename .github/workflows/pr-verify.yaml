@@ -48,7 +48,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 .github/scripts/refresh_secure_packer_bootstrapper_pin.py \
-            --repo NWarila/secure-packer-bootstrapper \
+            --repo nwarila-platform/secure-packer-bootstrapper \
             --output .github/pins/secure-packer-bootstrapper.env \
             --check \
             --allow-missing-release
@@ -122,7 +122,7 @@ jobs:
           path: proxmox-packer-framework
           persist-credentials: false
           ref: e218ed935af48de91f17afef4532d88878f101f4
-          repository: NWarila/Proxmox-Packer-Framework
+          repository: nwarila-platform/proxmox-packer-framework
 
       - name: Checkout Ansible Framework Repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -131,7 +131,7 @@ jobs:
           path: ansible-framework
           persist-credentials: false
           ref: e1b52f33d9270b14ba55cdb5810a7a3de0c83b90
-          repository: NWarila/ansible-framework
+          repository: nwarila-platform/ansible-framework
 
       - name: Apply Framework Overlay and Sync Consumer Files
         run: |
