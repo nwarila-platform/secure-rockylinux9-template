@@ -33,7 +33,7 @@ As of May 4, 2026, the composed CI path is pinned to:
 | Packer | `1.15.0` | `proxmox-packer-framework/packer/packer.pkr.hcl` |
 | `proxmox-packer-framework` | `9b7701638f7fc091abd19412b84f162ba0dc65ac` (`v0.0.1`) | `.github/workflows/packer.yaml` |
 | `ansible-framework` | `e1b52f33d9270b14ba55cdb5810a7a3de0c83b90` | `.github/workflows/packer.yaml` |
-| Rocky install media | `Rocky-9.6-x86_64-dvd.iso` | `packer/systems.auto.pkrvars.hcl` |
+| Rocky install media | `Rocky-9.8-x86_64-dvd.iso` | `terraform/terraform.tfvars` |
 
 The pinned `ansible-framework` commit currently publishes `Ansible Core >= 2.17` and
 `Python >= 3.12` as its baseline. Rocky Linux 9 reusable hardening roles are still upstream work,
@@ -60,7 +60,7 @@ so this repo currently owns the bootstrap playbook entrypoint only.
 | [Packer](https://developer.hashicorp.com/packer) | `1.15.0` | Exact requirement from the pinned `proxmox-packer-framework` contract |
 | [Ansible Core](https://pypi.org/project/ansible-core/) | `2.20.4` recommended | The pinned `ansible-framework` commit currently requires `>= 2.17` |
 | Python | `3.12.x` | Required by the current `ansible-framework` / `ansible-core` baseline |
-| Rocky ISO | `Rocky-9.7-x86_64-dvd.iso` | SHA256 is pinned in `packer/systems.auto.pkrvars.hcl` |
+| Rocky ISO | `Rocky-9.8-x86_64-dvd.iso` | SHA256 is pinned in `terraform/terraform.tfvars` after GPG-verifying Rocky's signed `CHECKSUM` |
 
 ### Local Contributor Tooling
 
@@ -106,6 +106,9 @@ material:
 - GitHub repo secrets / variables use the human-facing names in the first column.
 - The reviewed `secure-packer-bootstrapper` release pin lives in
   `.github/pins/secure-packer-bootstrapper.env` and is refreshed in pull requests by workflow.
+- The reviewed Rocky ISO pin lives in `terraform/terraform.tfvars`; refresh it with
+  `terraform/scripts/fetch_rocky_iso_sha256.sh` so the committed SHA256 is extracted only after
+  verifying Rocky's signed `CHECKSUM`.
 - Local manual Packer runs can either export the exact `PKR_VAR_*` names directly or `eval` the
   `secure-packer-bootstrapper` release bundle in the same shell as `packer validate` /
   `packer build`.
@@ -123,6 +126,7 @@ bundle URL or checksum.
 | `PROXMOX_NODE` | `PKR_VAR_proxmox_node` | Top-level override. When set, it wins over `packer_image.node`. |
 | `DEPLOY_USER_NAME` | `PKR_VAR_deploy_user_name` | Guest deploy account name |
 | `.github/pins/secure-packer-bootstrapper.env` | tracked release pin file | Reviewed release repo, tag, asset URLs, and SHA256 consumed by CI |
+| `terraform/terraform.tfvars` | tracked ISO pin file | Reviewed Rocky ISO URL, SHA256, and filename consumed by Terraform |
 
 The runtime bootstrap step generates these values immediately before `packer validate` and
 `packer build`:
@@ -145,6 +149,12 @@ CI uses the generated SSH key for first-hop login, the generated password hash f
   OpenSCAP STIG invocation, user creation, and post-install hardening commands.
 - `packer/rocky-linux-9.yml` owns the consumer bootstrap playbook entrypoint. Reusable roles stay
   upstream in `ansible-framework`.
+- `terraform/terraform.tfvars` pins the exact Rocky ISO URL, filename, and SHA256 consumed by
+  `terraform-proxmox-iso-manager-framework`.
+
+To bump the Rocky ISO pin, update `ROCKY_ISO_FILENAME` if the exact filename changed, run
+`terraform/scripts/fetch_rocky_iso_sha256.sh`, copy the printed SHA256 into `terraform.tfvars`,
+update `iso_pin.url` and `iso_pin.filename`, then run Terraform validation before opening a PR.
 
 ## Project Structure
 
@@ -160,6 +170,9 @@ CI uses the generated SSH key for first-hop login, the generated password hash f
 |   |-- ks.pkrtpl.hcl            # Consumer-owned Kickstart template
 |   |-- rocky-linux-9.yml        # Consumer-owned bootstrap playbook entrypoint
 |   `-- systems.auto.pkrvars.hcl # Consumer-owned framework input profile
+|-- terraform/
+|   |-- scripts/                 # ISO checksum provenance helpers
+|   `-- terraform.tfvars         # Reviewed Rocky ISO pin consumed by Terraform
 |-- tests/                       # Workflow-policy and pin-refresh unit tests
 |-- .editorconfig
 |-- .gitattributes
@@ -177,6 +190,7 @@ CI uses the generated SSH key for first-hop login, the generated password hash f
 ### Repo-local checks
 
 - `pre-commit run --all-files`
+- `terraform/scripts/fetch_rocky_iso_sha256.sh`
 - `yamllint` / `markdownlint-cli` / `packer fmt` against committed consumer files
 
 ### Composed framework validation

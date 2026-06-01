@@ -1,4 +1,4 @@
-family = "rocky9"
+family  = "rocky9"
 node    = "tcnhq-prxmx01"
 storage = "cephFS"
 
