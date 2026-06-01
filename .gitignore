@@ -80,6 +80,7 @@
 !.github/workflows/pr-verify.yaml
 !.github/workflows/refresh-bootstrapper-pin.yaml
 !.github/workflows/security.yaml
+!.github/workflows/terraform.yaml
 !.github/workflows/codeql.yaml
 !.github/workflows/release-please.yaml
 !tests/

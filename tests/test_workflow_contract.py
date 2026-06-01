@@ -74,11 +74,19 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("workflow_dispatch", workflow["on"])
         self.assertEqual(workflow["on"]["push"]["branches"], ["main"])
         self.assertIn("pin-preflight", workflow["jobs"])
+        self.assertNotIn("iso_pin_ready", str(workflow))
 
         packer_job = workflow["jobs"]["packer"]
         self.assertEqual(packer_job["needs"], "pin-preflight")
         self.assertEqual(packer_job["environment"], "packer-build")
         self.assertIn("self-hosted", packer_job["runs-on"])
+
+        step_names = [step.get("name") for step in packer_job["steps"]]
+        self.assertIn("Terraform Apply ISO Manager", step_names)
+        self.assertLess(
+            step_names.index("Terraform Apply ISO Manager"),
+            step_names.index("Sync Consumer Files Into Framework Checkout"),
+        )
 
     def test_pr_verify_runs_unit_tests_before_repo_gates(self):
         workflow = load_workflow(WORKFLOW_DIR / "pr-verify.yaml")
@@ -90,10 +98,36 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertLess(step_names.index("Run actionlint"), step_names.index("Run Repo-Local Gates"))
 
     def test_security_and_codeql_support_merge_group(self):
-        for workflow_name in ["security.yaml", "codeql.yaml"]:
+        for workflow_name in ["security.yaml", "codeql.yaml", "terraform.yaml"]:
             workflow = load_workflow(WORKFLOW_DIR / workflow_name)
             with self.subTest(workflow=workflow_name):
                 self.assertIn("merge_group", workflow["on"])
+
+    def test_terraform_workflow_gates_plan_and_main_apply(self):
+        workflow = load_workflow(WORKFLOW_DIR / "terraform.yaml")
+        self.assertEqual(workflow["permissions"], {})
+        self.assertIn("pull_request", workflow["on"])
+        self.assertIn("workflow_dispatch", workflow["on"])
+        self.assertEqual(workflow["on"]["push"]["branches"], ["main"])
+
+        validate_job = workflow["jobs"]["validate"]
+        apply_job = workflow["jobs"]["apply"]
+        validate_steps = [step.get("name") for step in validate_job["steps"]]
+        apply_steps = [step.get("name") for step in apply_job["steps"]]
+
+        self.assertEqual(validate_job["permissions"], {"contents": "read"})
+        self.assertIn("Terraform Init", validate_steps)
+        self.assertIn("Terraform Validate", validate_steps)
+        self.assertIn("TFLint", validate_steps)
+        self.assertIn("Trivy Terraform Config Scan", validate_steps)
+        self.assertIn("Terraform Plan", validate_steps)
+
+        self.assertEqual(apply_job["permissions"], {"contents": "read"})
+        self.assertEqual(apply_job["environment"], "terraform-apply")
+        self.assertIn("self-hosted", apply_job["runs-on"])
+        self.assertIn("Terraform Apply", apply_steps)
+        self.assertIn("github.event_name == 'push'", apply_job["if"])
+        self.assertIn("github.ref == 'refs/heads/main'", apply_job["if"])
 
     def test_required_status_check_names_remain_stable(self):
         security_workflow = load_workflow(WORKFLOW_DIR / "security.yaml")

@@ -66,6 +66,10 @@ Full image-build verification requires the self-hosted runner, Proxmox access, a
 CI workflow. This repo does not define a standalone repo-root `packer test` path today because the
 tracked artifact here is the consumer profile, not local `.pkr.hcl` builders.
 
+Terraform applies use the HCP Terraform `secure-rockylinux9-template-iso` workspace for remote state
+and locking. Local validation can use `terraform init -backend=false && terraform validate`; CI plan
+and main-branch apply require `TF_API_TOKEN`, `PROXMOX_VE_ENDPOINT`, and `PROXMOX_VE_API_TOKEN`.
+
 ## Tooling Notes
 
 - `.editorconfig` covers indentation, line endings, and trailing whitespace.

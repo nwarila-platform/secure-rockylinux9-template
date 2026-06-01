@@ -1,0 +1,170 @@
+name: "Terraform ISO Manager"
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - terraform/**
+      - .github/workflows/terraform.yaml
+  merge_group:
+  push:
+    branches: [main]
+    paths:
+      - terraform/**
+      - .github/workflows/terraform.yaml
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TERRAFORM_VERSION: "1.15.1"
+  TERRAFORM_ZIP_SHA256: "0921fee8c8435253ca49390a02109e906042e611a4e17f69e922261f5176c74f"
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+
+jobs:
+  validate:
+    name: Terraform Validate and Plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    env:
+      TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+      TF_VAR_proxmox_api_token: validation@pve!token=validation
+      TF_VAR_proxmox_endpoint: https://proxmox.example.test:8006/api2/json
+      TF_VAR_proxmox_insecure: "true"
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Install Terraform CLI
+        run: |
+          set -euo pipefail
+
+          terraform_dir="${RUNNER_TEMP}/terraform-bin"
+          mkdir -p "${terraform_dir}"
+          terraform_base_url="https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}"
+
+          curl --fail --silent --show-error --location \
+            --retry 5 --retry-delay 2 --retry-connrefused --connect-timeout 15 \
+            "${terraform_base_url}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip" \
+            -o "${RUNNER_TEMP}/terraform.zip"
+          printf '%s  %s\n' "${TERRAFORM_ZIP_SHA256}" "${RUNNER_TEMP}/terraform.zip" | sha256sum -c -
+          unzip -oq "${RUNNER_TEMP}/terraform.zip" -d "${terraform_dir}"
+          chmod 0755 "${terraform_dir}/terraform"
+
+          echo "${terraform_dir}" >> "${GITHUB_PATH}"
+          "${terraform_dir}/terraform" version
+
+      - name: Install TFLint
+        uses: terraform-linters/setup-tflint@ae78205cfffec9e8d93fd2b3115c7e9d3166d4b6 # v5
+        with:
+          tflint_version: v0.62.1
+
+      - name: Terraform Format Check
+        working-directory: terraform
+        run: |
+          set -euo pipefail
+          terraform fmt -check -diff
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: |
+          set -euo pipefail
+          terraform init
+
+      - name: Terraform Validate
+        working-directory: terraform
+        run: |
+          set -euo pipefail
+          terraform validate
+
+      - name: TFLint Init
+        working-directory: terraform
+        run: |
+          set -euo pipefail
+          tflint --init
+
+      - name: TFLint
+        working-directory: terraform
+        run: |
+          set -euo pipefail
+          tflint --minimum-failure-severity=warning
+
+      - name: Trivy Terraform Config Scan
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        with:
+          scan-type: "config"
+          scan-ref: "terraform"
+          severity: "HIGH,CRITICAL"
+          exit-code: "1"
+
+      - name: Terraform Plan
+        working-directory: terraform
+        run: |
+          set -euo pipefail
+          terraform plan -refresh=false -lock=false -out="${RUNNER_TEMP}/terraform-plan.tfplan"
+
+  apply:
+    name: Terraform Apply
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: [self-hosted, Linux, X64]
+    timeout-minutes: 45
+    environment: terraform-apply
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    env:
+      PROXMOX_VE_API_TOKEN: ${{ secrets.PROXMOX_VE_API_TOKEN }}
+      PROXMOX_VE_ENDPOINT: ${{ secrets.PROXMOX_VE_ENDPOINT }}
+      TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+      TF_VAR_proxmox_insecure: ${{ vars.PROXMOX_SKIP_TLS_VERIFY || 'false' }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Install Terraform CLI
+        run: |
+          set -euo pipefail
+
+          terraform_dir="${RUNNER_TEMP}/terraform-bin"
+          mkdir -p "${terraform_dir}"
+          terraform_base_url="https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}"
+
+          curl --fail --silent --show-error --location \
+            --retry 5 --retry-delay 2 --retry-connrefused --connect-timeout 15 \
+            "${terraform_base_url}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip" \
+            -o "${RUNNER_TEMP}/terraform.zip"
+          printf '%s  %s\n' "${TERRAFORM_ZIP_SHA256}" "${RUNNER_TEMP}/terraform.zip" | sha256sum -c -
+          unzip -oq "${RUNNER_TEMP}/terraform.zip" -d "${terraform_dir}"
+          chmod 0755 "${terraform_dir}/terraform"
+
+          echo "${terraform_dir}" >> "${GITHUB_PATH}"
+          "${terraform_dir}/terraform" version
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: |
+          set -euo pipefail
+          terraform init
+
+      - name: Terraform Apply
+        working-directory: terraform
+        run: |
+          set -euo pipefail
+          terraform apply -auto-approve

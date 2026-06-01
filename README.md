@@ -109,6 +109,8 @@ material:
 - The reviewed Rocky ISO pin lives in `terraform/terraform.tfvars`; refresh it with
   `terraform/scripts/fetch_rocky_iso_sha256.sh` so the committed SHA256 is extracted only after
   verifying Rocky's signed `CHECKSUM`.
+- Terraform state for the ISO manager root uses HCP Terraform remote state and locking in the
+  `secure-rockylinux9-template-iso` workspace.
 - Local manual Packer runs can either export the exact `PKR_VAR_*` names directly or `eval` the
   `secure-packer-bootstrapper` release bundle in the same shell as `packer validate` /
   `packer build`.
@@ -125,6 +127,9 @@ bundle URL or checksum.
 | `PROXMOX_SKIP_TLS_VERIFY` | `PKR_VAR_proxmox_skip_tls_verify` | Top-level override. When set, it wins over `packer_image.insecure_skip_tls_verify`. This repo keeps `true` in the committed profile as a documented lab exception. |
 | `PROXMOX_NODE` | `PKR_VAR_proxmox_node` | Top-level override. When set, it wins over `packer_image.node`. |
 | `DEPLOY_USER_NAME` | `PKR_VAR_deploy_user_name` | Guest deploy account name |
+| `PROXMOX_VE_ENDPOINT` | provider env | Proxmox API endpoint consumed by the Terraform ISO manager |
+| `PROXMOX_VE_API_TOKEN` | provider env | Proxmox API token consumed by the Terraform ISO manager |
+| `TF_API_TOKEN` | `TF_TOKEN_app_terraform_io` | HCP Terraform token for remote state and locking |
 | `.github/pins/secure-packer-bootstrapper.env` | tracked release pin file | Reviewed release repo, tag, asset URLs, and SHA256 consumed by CI |
 | `terraform/terraform.tfvars` | tracked ISO pin file | Reviewed Rocky ISO URL, SHA256, and filename consumed by Terraform |
 
