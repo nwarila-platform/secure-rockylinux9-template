@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/nwarila-platform/secure-rockylinux9-template/compare/v2.0.0...v2.0.1) (2026-06-01)
+
+
+### Bug Fixes
+
+* **ci:** make packer node override optional ([4def63b](https://github.com/nwarila-platform/secure-rockylinux9-template/commit/4def63ba605c070c496780a1596f77b081d7a034))
+
 ## [2.0.0](https://github.com/nwarila-platform/secure-rockylinux9-template/compare/v1.1.1...v2.0.0) (2026-06-01)
 
 
