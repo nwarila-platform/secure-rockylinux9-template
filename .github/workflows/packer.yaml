@@ -8,6 +8,7 @@ on:
       - packer/**
       - .github/pins/secure-packer-bootstrapper.env
       - .github/workflows/packer.yaml
+      - terraform/**
 
 permissions:
   contents: read
@@ -96,6 +97,14 @@ jobs:
         shell: bash
     env:
       PACKER_BIN: /usr/bin/packer
+      TERRAFORM_VERSION: "1.15.1"
+      TERRAFORM_ZIP_SHA256: "0921fee8c8435253ca49390a02109e906042e611a4e17f69e922261f5176c74f"
+      PROXMOX_VE_API_TOKEN: ${{ secrets.PROXMOX_VE_API_TOKEN }}
+      PROXMOX_VE_ENDPOINT: ${{ secrets.PROXMOX_VE_ENDPOINT }}
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+      TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+      TF_VAR_proxmox_insecure: ${{ vars.PROXMOX_SKIP_TLS_VERIFY || 'false' }}
       PKR_VAR_proxmox_hostname: ${{ secrets.PROXMOX_HOSTNAME }}
       PKR_VAR_proxmox_api_token_id: ${{ secrets.PROXMOX_PACKER_FRAMEWORK_TOKEN_ID }}
       PKR_VAR_proxmox_api_token_secret: ${{ secrets.PROXMOX_PACKER_FRAMEWORK_SECRET }}
@@ -177,13 +186,33 @@ jobs:
             exit 1
           fi
 
+      - name: Install Terraform CLI
+        run: |
+          set -euo pipefail
+
+          terraform_dir="${RUNNER_TEMP}/terraform-bin"
+          mkdir -p "${terraform_dir}"
+          terraform_base_url="https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}"
+
+          curl --fail --silent --show-error --location \
+            --retry 5 --retry-delay 2 --retry-connrefused --connect-timeout 15 \
+            "${terraform_base_url}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip" \
+            -o "${RUNNER_TEMP}/terraform.zip"
+          printf '%s  %s\n' "${TERRAFORM_ZIP_SHA256}" "${RUNNER_TEMP}/terraform.zip" | sha256sum -c -
+          unzip -oq "${RUNNER_TEMP}/terraform.zip" -d "${terraform_dir}"
+          chmod 0755 "${terraform_dir}/terraform"
+
+          echo "${terraform_dir}" >> "${GITHUB_PATH}"
+          "${terraform_dir}/terraform" version
+
       - name: Checkout Packer Framework Repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 1
           path: proxmox-packer-framework
           persist-credentials: false
-          ref: e218ed935af48de91f17afef4532d88878f101f4
+          # v0.0.1 — secure-packer-bootstrapper credential contract is now native to the framework.
+          ref: 9b7701638f7fc091abd19412b84f162ba0dc65ac
           repository: nwarila-platform/proxmox-packer-framework
 
       - name: Checkout Ansible Framework Repository
@@ -205,6 +234,9 @@ jobs:
             "PKR_VAR_proxmox_api_token_secret"
             "PKR_VAR_proxmox_node"
             "PKR_VAR_deploy_user_name"
+            "PROXMOX_VE_API_TOKEN"
+            "PROXMOX_VE_ENDPOINT"
+            "TF_TOKEN_app_terraform_io"
           )
 
           for variable_name in "${required_variables[@]}"; do
@@ -224,6 +256,8 @@ jobs:
             "sha256sum"
             "ssh-add"
             "ssh-agent"
+            "terraform"
+            "unzip"
           )
 
           for command_name in "${required_commands[@]}"; do
@@ -240,21 +274,27 @@ jobs:
 
           echo "Using Packer executable: ${PACKER_BIN}"
           "${PACKER_BIN}" version
+          terraform version
 
-      - name: Apply Framework Overlay and Sync Consumer Files
+      - name: Terraform Apply ISO Manager
+        working-directory: ${{ github.workspace }}/terraform
         run: |
           set -euo pipefail
 
-          framework_dir="${GITHUB_WORKSPACE}/proxmox-packer-framework"
-          destination_dir="${framework_dir}/packer"
-          overlay_patch="${GITHUB_WORKSPACE}/packer/framework-patches/proxmox-packer-framework-e218ed935af48de91f17afef4532d88878f101f4-secure-bootstrap.patch"
+          terraform init
+          terraform apply -auto-approve
+          test -f iso-manager.auto.pkrvars.hcl
 
-          git -C "${framework_dir}" apply --check "${overlay_patch}"
-          git -C "${framework_dir}" apply "${overlay_patch}"
+      - name: Sync Consumer Files Into Framework Checkout
+        run: |
+          set -euo pipefail
+
+          destination_dir="${GITHUB_WORKSPACE}/proxmox-packer-framework/packer"
 
           cp -f "${GITHUB_WORKSPACE}/packer/systems.auto.pkrvars.hcl" "${destination_dir}/"
           cp -f "${GITHUB_WORKSPACE}/packer/ks.pkrtpl.hcl" "${destination_dir}/"
           cp -f "${GITHUB_WORKSPACE}/packer/rocky-linux-9.yml" "${destination_dir}/"
+          cp -f "${GITHUB_WORKSPACE}/terraform/iso-manager.auto.pkrvars.hcl" "${destination_dir}/"
 
       - name: Packer Init
         working-directory: ${{ github.workspace }}/proxmox-packer-framework/packer
@@ -387,6 +427,7 @@ jobs:
           path: |
             ${{ github.workspace }}/proxmox-packer-framework/packer/packer-build.log
             ${{ github.workspace }}/proxmox-packer-framework/packer/manifests
+            ${{ github.workspace }}/proxmox-packer-framework/packer/iso-manager.auto.pkrvars.hcl
             ${{ github.workspace }}/.github/pins/secure-packer-bootstrapper.env
             ${{ runner.temp }}/secure-packer-bootstrapper/secure-packer-bootstrapper.release.json
           if-no-files-found: warn

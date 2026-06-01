@@ -80,6 +80,7 @@
 !.github/workflows/pr-verify.yaml
 !.github/workflows/refresh-bootstrapper-pin.yaml
 !.github/workflows/security.yaml
+!.github/workflows/terraform.yaml
 !.github/workflows/codeql.yaml
 !.github/workflows/release-please.yaml
 !tests/
@@ -88,8 +89,15 @@
 
 # Include Packer configuration files.
 !packer
-!packer/framework-patches/
-!packer/framework-patches/proxmox-packer-framework-e218ed935af48de91f17afef4532d88878f101f4-secure-bootstrap.patch
 !packer/ks.pkrtpl.hcl
 !packer/rocky-linux-9.yml
 !packer/systems.auto.pkrvars.hcl
+
+# Include Terraform ISO manager configuration files.
+!terraform/
+!terraform/*.tf
+!terraform/*.tfvars
+!terraform/*.tfvars.example
+!terraform/.terraform.lock.hcl
+!terraform/scripts/
+!terraform/scripts/*.sh

@@ -17,13 +17,6 @@
       "problemMatcher": []
     },
     {
-      "label": "Packer: Apply Secure Bootstrap Overlay (Framework Workspace)",
-      "type": "shell",
-      "command": "$framework = \"${workspaceFolder}/../proxmox-packer-framework\"; $patch = \"${workspaceFolder}/packer/framework-patches/proxmox-packer-framework-e218ed935af48de91f17afef4532d88878f101f4-secure-bootstrap.patch\"; $expected = \"e218ed935af48de91f17afef4532d88878f101f4\"; if ((git -C $framework rev-parse HEAD).Trim() -ne $expected) { throw \"Expected ../proxmox-packer-framework at $expected\" }; & git -C $framework apply --reverse --check $patch 2>$null; if ($LASTEXITCODE -eq 0) { Write-Host \"Framework overlay already applied.\"; exit 0 }; & git -C $framework apply --check $patch; if ($LASTEXITCODE -ne 0) { throw \"Framework overlay patch no longer applies cleanly.\" }; & git -C $framework apply $patch; if ($LASTEXITCODE -ne 0) { throw \"Failed to apply framework overlay patch.\" }",
-      "group": "build",
-      "problemMatcher": []
-    },
-    {
       "label": "Packer: Format (Repo Workspace)",
       "type": "shell",
       "command": "packer fmt -diff packer",
@@ -121,7 +114,6 @@
         "Framework: Verify Sibling Checkouts",
         "Packer: Format Check (Repo Workspace)",
         "Packer: Sync Consumer Files (Framework Workspace)",
-        "Packer: Apply Secure Bootstrap Overlay (Framework Workspace)",
         "Packer: Init (Framework Workspace)",
         "Ansible: Syntax Check (Framework Workspace)",
         "Packer: Validate (Framework Workspace)",

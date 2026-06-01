@@ -41,6 +41,10 @@ For most changes in this repository, local validation means:
 - `pre-commit run --all-files`
 - any repo-local lint or formatting tasks related to the files you changed
 
+If you update the Rocky ISO pin, run `terraform/scripts/fetch_rocky_iso_sha256.sh` and commit the
+exact `terraform/terraform.tfvars` URL, filename, and SHA256 extracted from Rocky's GPG-verified
+`CHECKSUM`.
+
 ### Framework-aware validation
 
 This repository's canonical Packer validation path is composed with sibling checkouts:
@@ -61,6 +65,10 @@ That path is what the default VS Code validation task and CI workflow use. It cu
 Full image-build verification requires the self-hosted runner, Proxmox access, and the privileged
 CI workflow. This repo does not define a standalone repo-root `packer test` path today because the
 tracked artifact here is the consumer profile, not local `.pkr.hcl` builders.
+
+Terraform applies use the HCP Terraform `secure-rockylinux9-template-iso` workspace for remote state
+and locking. Local validation can use `terraform init -backend=false && terraform validate`; CI plan
+and main-branch apply require `TF_API_TOKEN`, `PROXMOX_VE_ENDPOINT`, and `PROXMOX_VE_API_TOKEN`.
 
 ## Tooling Notes
 
@@ -89,6 +97,10 @@ workflow files, run the repo-native tests and expect CI to enforce workflow synt
 When the upstream `secure-packer-bootstrapper` release changes, treat
 `.github/pins/secure-packer-bootstrapper.env` as the source of truth for the reviewed release URL
 set and SHA256 consumed by the privileged build workflow.
+
+When the upstream Rocky ISO changes, treat `terraform/terraform.tfvars` as the source of truth for
+the reviewed ISO pin. The SHA256 must come from Rocky's signed `CHECKSUM`; do not copy a digest from
+an unsigned mirror page or from a locally downloaded ISO.
 
 ## Commit Messages
 

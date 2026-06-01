@@ -21,21 +21,19 @@ upstream in [ansible-framework](https://github.com/nwarila-platform/ansible-fram
 1. This repository owns the consumer profile inputs:
    `packer/systems.auto.pkrvars.hcl`, `packer/ks.pkrtpl.hcl`, and `packer/rocky-linux-9.yml`.
 2. CI checks out `proxmox-packer-framework` and `ansible-framework` at exact SHAs.
-3. CI currently applies a repo-owned compatibility overlay to the pinned `proxmox-packer-framework`
-   commit until the secure-bootstrap contract is published upstream.
-4. CI copies this repo's consumer files into `proxmox-packer-framework/packer`.
-5. Packer validation and builds run in the framework checkout, not in this repo alone.
+3. CI copies this repo's consumer files into `proxmox-packer-framework/packer`.
+4. Packer validation and builds run in the framework checkout, not in this repo alone.
 
 ## Validated With
 
-As of March 25, 2026, the composed CI path is pinned to:
+As of May 4, 2026, the composed CI path is pinned to:
 
 | Component | Exact version / pin | Source of truth |
 |---|---|---|
 | Packer | `1.15.0` | `proxmox-packer-framework/packer/packer.pkr.hcl` |
-| `proxmox-packer-framework` | `e218ed935af48de91f17afef4532d88878f101f4` | `.github/workflows/packer.yaml` |
+| `proxmox-packer-framework` | `9b7701638f7fc091abd19412b84f162ba0dc65ac` (`v0.0.1`) | `.github/workflows/packer.yaml` |
 | `ansible-framework` | `e1b52f33d9270b14ba55cdb5810a7a3de0c83b90` | `.github/workflows/packer.yaml` |
-| Rocky install media | `Rocky-9.7-x86_64-dvd.iso` | `packer/systems.auto.pkrvars.hcl` |
+| Rocky install media | `Rocky-9.8-x86_64-dvd.iso` | `terraform/terraform.tfvars` |
 
 The pinned `ansible-framework` commit currently publishes `Ansible Core >= 2.17` and
 `Python >= 3.12` as its baseline. Rocky Linux 9 reusable hardening roles are still upstream work,
@@ -62,7 +60,7 @@ so this repo currently owns the bootstrap playbook entrypoint only.
 | [Packer](https://developer.hashicorp.com/packer) | `1.15.0` | Exact requirement from the pinned `proxmox-packer-framework` contract |
 | [Ansible Core](https://pypi.org/project/ansible-core/) | `2.20.4` recommended | The pinned `ansible-framework` commit currently requires `>= 2.17` |
 | Python | `3.12.x` | Required by the current `ansible-framework` / `ansible-core` baseline |
-| Rocky ISO | `Rocky-9.7-x86_64-dvd.iso` | SHA256 is pinned in `packer/systems.auto.pkrvars.hcl` |
+| Rocky ISO | `Rocky-9.8-x86_64-dvd.iso` | SHA256 is pinned in `terraform/terraform.tfvars` after GPG-verifying Rocky's signed `CHECKSUM` |
 
 ### Local Contributor Tooling
 
@@ -88,7 +86,7 @@ git clone https://github.com/nwarila-platform/ansible-framework.git
 The default VS Code tasks and the composed local validation path expect these sibling directories:
 
 ```text
-../Secure-RockyLinux9-Template
+../secure-rockylinux9-template
 ../proxmox-packer-framework
 ../ansible-framework
 ```
@@ -108,6 +106,11 @@ material:
 - GitHub repo secrets / variables use the human-facing names in the first column.
 - The reviewed `secure-packer-bootstrapper` release pin lives in
   `.github/pins/secure-packer-bootstrapper.env` and is refreshed in pull requests by workflow.
+- The reviewed Rocky ISO pin lives in `terraform/terraform.tfvars`; refresh it with
+  `terraform/scripts/fetch_rocky_iso_sha256.sh` so the committed SHA256 is extracted only after
+  verifying Rocky's signed `CHECKSUM`.
+- Terraform state for the ISO manager root uses HCP Terraform remote state and locking in the
+  `secure-rockylinux9-template-iso` workspace.
 - Local manual Packer runs can either export the exact `PKR_VAR_*` names directly or `eval` the
   `secure-packer-bootstrapper` release bundle in the same shell as `packer validate` /
   `packer build`.
@@ -124,7 +127,11 @@ bundle URL or checksum.
 | `PROXMOX_SKIP_TLS_VERIFY` | `PKR_VAR_proxmox_skip_tls_verify` | Top-level override. When set, it wins over `packer_image.insecure_skip_tls_verify`. This repo keeps `true` in the committed profile as a documented lab exception. |
 | `PROXMOX_NODE` | `PKR_VAR_proxmox_node` | Top-level override. When set, it wins over `packer_image.node`. |
 | `DEPLOY_USER_NAME` | `PKR_VAR_deploy_user_name` | Guest deploy account name |
+| `PROXMOX_VE_ENDPOINT` | provider env | Proxmox API endpoint consumed by the Terraform ISO manager |
+| `PROXMOX_VE_API_TOKEN` | provider env | Proxmox API token consumed by the Terraform ISO manager |
+| `TF_API_TOKEN` | `TF_TOKEN_app_terraform_io` | HCP Terraform token for remote state and locking |
 | `.github/pins/secure-packer-bootstrapper.env` | tracked release pin file | Reviewed release repo, tag, asset URLs, and SHA256 consumed by CI |
+| `terraform/terraform.tfvars` | tracked ISO pin file | Reviewed Rocky ISO URL, SHA256, and filename consumed by Terraform |
 
 The runtime bootstrap step generates these values immediately before `packer validate` and
 `packer build`:
@@ -147,6 +154,12 @@ CI uses the generated SSH key for first-hop login, the generated password hash f
   OpenSCAP STIG invocation, user creation, and post-install hardening commands.
 - `packer/rocky-linux-9.yml` owns the consumer bootstrap playbook entrypoint. Reusable roles stay
   upstream in `ansible-framework`.
+- `terraform/terraform.tfvars` pins the exact Rocky ISO URL, filename, and SHA256 consumed by
+  `terraform-proxmox-iso-manager-framework`.
+
+To bump the Rocky ISO pin, update `ROCKY_ISO_FILENAME` if the exact filename changed, run
+`terraform/scripts/fetch_rocky_iso_sha256.sh`, copy the printed SHA256 into `terraform.tfvars`,
+update `iso_pin.url` and `iso_pin.filename`, then run Terraform validation before opening a PR.
 
 ## Project Structure
 
@@ -159,10 +172,12 @@ CI uses the generated SSH key for first-hop login, the generated password hash f
 |-- .config/                      # Markdown/YAML lint configuration
 |-- .vscode/                      # Editor tasks/settings for the multi-repo workflow
 |-- packer/
-|   |-- framework-patches/        # Temporary framework compatibility overlay
 |   |-- ks.pkrtpl.hcl            # Consumer-owned Kickstart template
 |   |-- rocky-linux-9.yml        # Consumer-owned bootstrap playbook entrypoint
 |   `-- systems.auto.pkrvars.hcl # Consumer-owned framework input profile
+|-- terraform/
+|   |-- scripts/                 # ISO checksum provenance helpers
+|   `-- terraform.tfvars         # Reviewed Rocky ISO pin consumed by Terraform
 |-- tests/                       # Workflow-policy and pin-refresh unit tests
 |-- .editorconfig
 |-- .gitattributes
@@ -180,6 +195,7 @@ CI uses the generated SSH key for first-hop login, the generated password hash f
 ### Repo-local checks
 
 - `pre-commit run --all-files`
+- `terraform/scripts/fetch_rocky_iso_sha256.sh`
 - `yamllint` / `markdownlint-cli` / `packer fmt` against committed consumer files
 
 ### Composed framework validation
@@ -188,10 +204,9 @@ The real contract test for this repo happens after the consumer files are copied
 `../proxmox-packer-framework/packer` (local tasks) or
 `${{ github.workspace }}/proxmox-packer-framework/packer` (CI). That composed path performs:
 
-1. Apply the repo-owned compatibility overlay to the pinned framework checkout
-2. Ansible syntax check against the pinned `../ansible-framework/ansible.cfg`
-3. `packer init`
-4. `packer validate`
+1. Ansible syntax check against the pinned `../ansible-framework/ansible.cfg`
+2. `packer init`
+3. `packer validate`
 
 ### Branch-promotion gates
 
@@ -202,8 +217,7 @@ The PR workflow path owns the non-privileged gates:
 3. Run `pre-commit run --all-files`
 4. Verify the pinned Packer download against the tracked SHA256 before installing it
 5. Check out the pinned framework repositories
-6. Apply the repo-owned framework compatibility overlay
-7. Run Ansible syntax validation plus composed `packer init` / `packer validate`
+6. Run Ansible syntax validation plus composed `packer init` / `packer validate`
 
 ### Full integration build
 
@@ -227,7 +241,7 @@ Framework-aware tasks are labeled explicitly and expect adjacent `proxmox-packer
 
 | Workflow | Trigger | Purpose |
 |---|---|---|
-| **PR Verify** | Pull requests to `main` | Run branch-promotion gates: pin freshness, automation unit tests, repo-local checks, verified tool bootstrap, framework overlay validation, Ansible syntax validation, and composed `packer validate` |
+| **PR Verify** | Pull requests to `main` | Run branch-promotion gates: pin freshness, automation unit tests, repo-local checks, verified tool bootstrap, Ansible syntax validation, and composed `packer validate` |
 | **Refresh secure-packer-bootstrapper Pin** | PR sync, weekly schedule, manual | Refresh the tracked release URLs and SHA256 in `.github/pins/secure-packer-bootstrapper.env` |
 | **Packer Build** | Push to `main`, manual on `main` only | Run the trusted deployment path only: load the reviewed release pin, mint runtime credentials, perform final `packer validate`, and build |
 | **Security Scan** | Push, PR, weekly schedule | Trivy filesystem/secret scan plus Gitleaks history scan |
