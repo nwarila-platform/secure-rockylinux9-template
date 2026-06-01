@@ -111,21 +111,6 @@ ansible_config = {
 
 additional_iso_files = []
 
-boot_iso = {
-  cd_label             = "BOOTISO"
-  iso_checksum         = "sha256:8ff2a47e2f3bfe442617fceb7ef289b7b1d2d0502089dbbd505d5368b2b3a90f"
-  iso_file             = "cephFS:iso/Rocky-9.6-x86_64-dvd.iso"
-  iso_urls             = null
-  index                = 0
-  iso_download_pve     = null
-  iso_storage_pool     = null
-  iso_target_extension = null
-  iso_target_path      = null
-  keep_cdrom_device    = false
-  type                 = "scsi"
-  unmount              = true
-}
-
 disks = [
   {
     asyncio             = "io_uring"

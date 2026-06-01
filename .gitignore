@@ -91,3 +91,12 @@
 !packer/ks.pkrtpl.hcl
 !packer/rocky-linux-9.yml
 !packer/systems.auto.pkrvars.hcl
+
+# Include Terraform ISO manager configuration files.
+!terraform/
+!terraform/*.tf
+!terraform/*.tfvars
+!terraform/*.tfvars.example
+!terraform/.terraform.lock.hcl
+!terraform/scripts/
+!terraform/scripts/*.sh

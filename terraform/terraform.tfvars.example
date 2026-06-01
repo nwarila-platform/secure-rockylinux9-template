@@ -1,0 +1,9 @@
+family = "rocky9"
+node    = "tcnhq-prxmx01"
+storage = "cephFS"
+
+iso_pin = {
+  url      = "https://dl.rockylinux.org/pub/rocky/9.7/isos/x86_64/Rocky-9.7-x86_64-dvd.iso"
+  sha256   = "d48e902325dce6793935b4e13672a0d9a4f958e02d4e23fcf0a8a34c49ef03da"
+  filename = "Rocky-9.7-x86_64-dvd.iso"
+}
