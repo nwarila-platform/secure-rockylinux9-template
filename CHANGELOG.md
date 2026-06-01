@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.0.0](https://github.com/nwarila-platform/secure-rockylinux9-template/compare/v1.1.1...v2.0.0) (2026-06-01)
+
+
+### ⚠ BREAKING CHANGES
+
+* **packer:** migrate to proxmox-packer-framework v0.0.1 (drop monkey-patch overlay)
+
+### Bug Fixes
+
+* **ci:** repoint framework refs to nwarila-platform, delicense gitleaks, gate live build ([#12](https://github.com/nwarila-platform/secure-rockylinux9-template/issues/12)) ([9cf03b4](https://github.com/nwarila-platform/secure-rockylinux9-template/commit/9cf03b45d65505d44bf26aff6fdb6dbe542aa8e0))
+* **packer:** migrate to proxmox-packer-framework v0.0.1 (drop monkey-patch overlay) ([a440e8b](https://github.com/nwarila-platform/secure-rockylinux9-template/commit/a440e8b56f193b41e562e95ad548c69607af8953))
+* **terraform:** make boot ISO Terraform-managed ([5906bfe](https://github.com/nwarila-platform/secure-rockylinux9-template/commit/5906bfe33e3bc4f7247e2ba24d52f913daed7278))
+* **terraform:** pin Rocky ISO from signed checksum ([b73aefe](https://github.com/nwarila-platform/secure-rockylinux9-template/commit/b73aefe86c984bfb868204e2faa117f2fb14ec58))
+
 ## [1.1.1](https://github.com/NWarila/secure-rockylinux9-template/compare/v1.1.0...v1.1.1) (2026-03-25)
 
 
