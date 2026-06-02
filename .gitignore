@@ -42,6 +42,12 @@
 !CONTRIBUTING.md
 !SECURITY.md
 !SUPPORT.md
+!docs
+!docs/README.md
+!docs/explanation
+!docs/explanation/stig-hardening-via-kickstart.md
+!docs/runbooks
+!docs/runbooks/manual-packer-build.md
 
 # Include pre-commit configuration.
 !.pre-commit-config.yaml
