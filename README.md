@@ -35,7 +35,7 @@ As of May 4, 2026, the composed CI path is pinned to:
 | `ansible-framework` | `e1b52f33d9270b14ba55cdb5810a7a3de0c83b90` | `.github/workflows/packer.yaml` |
 | Rocky install media | `Rocky-9.8-x86_64-dvd.iso` | `terraform/terraform.tfvars` |
 
-The pinned `ansible-framework` commit currently publishes `Ansible Core >= 2.17` and
+The pinned `ansible-framework` commit currently requires `Ansible Core >= 2.17, < 2.19` and
 `Python >= 3.12` as its baseline. Rocky Linux 9 reusable hardening roles are still upstream work,
 so this repo currently owns the bootstrap playbook entrypoint only.
 
@@ -58,7 +58,7 @@ so this repo currently owns the bootstrap playbook entrypoint only.
 | Tool / dependency | Version | Notes |
 |---|---|---|
 | [Packer](https://developer.hashicorp.com/packer) | `1.15.0` | Exact requirement from the pinned `proxmox-packer-framework` contract |
-| [Ansible Core](https://pypi.org/project/ansible-core/) | `2.20.4` recommended | The pinned `ansible-framework` commit currently requires `>= 2.17` |
+| [Ansible Core](https://pypi.org/project/ansible-core/) | `>= 2.17, < 2.19` (e.g. `2.18.x`) | Exact constraint from the pinned `ansible-framework` `requirements-dev.txt`; `2.20.x` is out of range |
 | Python | `3.12.x` | Required by the current `ansible-framework` / `ansible-core` baseline |
 | Rocky ISO | `Rocky-9.8-x86_64-dvd.iso` | SHA256 is pinned in `terraform/terraform.tfvars` after GPG-verifying Rocky's signed `CHECKSUM` |
 
