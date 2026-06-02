@@ -12,8 +12,8 @@ requires the `packer-build` environment, Proxmox access, and runtime secrets.
 - Install the exact tool versions used by CI:
   - Packer `1.15.0`
   - Terraform `1.15.1`
-  - Ansible Core `2.20.4` or a version compatible with the pinned
-    `ansible-framework` ref
+  - Ansible Core `>= 2.17, < 2.19` (e.g. `2.18.x`), per the pinned
+    `ansible-framework` `requirements-dev.txt` constraint
 - Clone these repositories as siblings:
   - `secure-rockylinux9-template`
   - `proxmox-packer-framework`
